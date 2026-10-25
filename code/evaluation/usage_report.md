@@ -1,6 +1,6 @@
 # Model usage report
 
-Final full-dataset run: 518 requests. Generated 2026-10-25T15:51:43.711922+00:00.
+Final full-dataset run: 518 requests. Generated 2026-10-25T16:13:28.496048+00:00.
 
 | Provider / runtime | Model | Calls / predictions | Input LLM tokens | Output LLM tokens | API cost USD |
 |---|---|---:|---:|---:|---:|
@@ -16,7 +16,7 @@ OCR detection/angle/recognition neural inference is reported as a whole image-pi
 - Average LLM tokens per request: 0.00.
 - Estimated total paid API cost: USD 0.00.
 - Estimated paid API cost per request: USD 0.000000.
-- Final run elapsed time, including extraction/cache loading and all requests: 3.070 seconds.
+- Final run elapsed time, including extraction/cache loading and all requests: 3.072 seconds.
 - Final output SHA-256: `0932878aee1570be7f149af992c7579e4dd81d107a2f8fa0e267f5b82d47cc5f`.
 
 Local CPU/GPU time, electricity, bandwidth and dependency downloads are not priced or claimed to be costless. No provider endpoint, API key or remote inference service was used by the submitted runtime. Development assistance in Codex is distinct from this inference-run usage and is recorded in `log.txt`. The local intent model and ONNX models are described directly above; there is no unreported LLM provider.

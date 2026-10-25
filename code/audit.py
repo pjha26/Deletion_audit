@@ -313,7 +313,7 @@ class Auditor:
             current = [o for o in group if o.time == newest]
             # At one snapshot, a surviving copy outweighs absence in a different replica.
             severity = {'ABSENT': 0, 'REDACTED': 1, 'ANONYMIZED': 1, 'DISABLED': 1, 'BLOCKED': 1,
-                        'PRESENT': 2, 'EXPOSED': 3, 'ACTIVE': 3}
+                        'PRESENT': 2, 'EXPOSED': 3, 'ACTIVE': 3, 'UNKNOWN': 4}
             obs = max(current, key=lambda o: (severity.get(o.state, 0), o.rank, o.evidence))
             replicas = defaultdict(list)
             for item in group:
@@ -358,7 +358,8 @@ class Auditor:
                 'steps_json': json.dumps(steps, ensure_ascii=False, separators=(',', ':'))}, trace
 
 
-def validate(predictions, requests, evidence_ids):
+def validate(predictions, requests, evidence_ids, traces=None):
+    provenance = {t['case_id']: {(r['system'],r['resource'],r['evidence']) for r in t.get('resources',[])} for t in traces or []}
     expected = sorted(r['case_id'] for r in requests)
     actual = [r['case_id'] for r in predictions]
     if actual != expected or len(set(actual)) != len(actual):
@@ -370,16 +371,29 @@ def validate(predictions, requests, evidence_ids):
         steps = json.loads(row['steps_json'])
         if not isinstance(steps, list) or (status == 'NOT_APPLICABLE' and steps):
             raise ValueError('Invalid steps array')
+        if status == 'COMPLETE' and not steps:
+            raise ValueError('Complete verdict requires evidence-backed verification')
+        if status == 'INCOMPLETE' and not {'FINDING','REMEDIATION','VERIFICATION'} <= {s.get('phase') for s in steps}:
+            raise ValueError('Incomplete verdict requires findings, remediation and verification')
         if steps != sorted(steps, key=step_key):
             raise ValueError('Step ordering violation')
+        seen = set()
         for no, step in enumerate(steps, 1):
             if set(step) != {'step_no', 'phase', 'system_id', 'resource_id', 'operation', 'state', 'evidence_id'}:
                 raise ValueError('Step fields mismatch')
-            if step['step_no'] != no or step['state'] != STATES[step['operation']]:
+            if type(step['step_no']) is not int or step['step_no'] != no or step['state'] != STATES[step['operation']]:
                 raise ValueError('Step number/state mismatch')
+            if any(not isinstance(step[k],str) or not step[k].strip() for k in ('system_id','resource_id','phase','operation','state')):
+                raise ValueError('Empty or invalid step identifiers')
+            identity = (step['phase'],step['operation'],step['system_id'],step['resource_id'])
+            if identity in seen:
+                raise ValueError('Duplicate step')
+            seen.add(identity)
             must_cite = step['phase'] == 'FINDING' or status == 'COMPLETE'
             if must_cite and step['evidence_id'] not in evidence_ids:
                 raise ValueError('Missing or invalid evidence')
+            if must_cite and traces is not None and (step['system_id'],step['resource_id'],step['evidence_id']) not in provenance.get(row['case_id'],set()):
+                raise ValueError('Citation does not prove this case resource')
             if not must_cite and step['evidence_id'] != '':
                 raise ValueError('Future step must not cite completed evidence')
             if status == 'COMPLETE' and step['phase'] != 'VERIFICATION':

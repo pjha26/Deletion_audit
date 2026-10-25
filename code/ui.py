@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import mimetypes
 import subprocess
@@ -13,6 +14,7 @@ from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
+from main import input_fingerprint, engine_fingerprint
 
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = Path(__file__).parent/'ui'
@@ -51,6 +53,17 @@ class Store:
             self.coverage = {r['file_id']: r for r in read_json(self.root/'work/cache/coverage.json', [])}
             self.usage = read_json(self.root/'work/cache/last_usage.json', {})
             self.metrics = read_json(self.root/'work/evaluation_details.json', {})
+            self.integrity = []
+            if self.predictions:
+                try:
+                    expected = {'input_sha256': input_fingerprint(data,data/'deletion_requests.csv'),
+                                'engine_sha256': engine_fingerprint(),
+                                'output_sha256': hashlib.sha256((self.root/'output.csv').read_bytes()).hexdigest(),
+                                'trace_sha256': hashlib.sha256((self.root/'work/audit_traces.json').read_bytes()).hexdigest()}
+                    if any(self.usage.get(key) != value for key,value in expected.items()):
+                        self.integrity.append('Inputs, engine or output changed since the verified run. Run audit again before export.')
+                except (OSError,ValueError,KeyError):
+                    self.integrity.append('Run provenance is missing or unreadable. Run audit again before export.')
             self.email_users = {r['email'].casefold(): uid for uid, r in self.users.items()}
             for row in self.history:
                 if row['field_name'] == 'email':
@@ -68,7 +81,9 @@ class Store:
         if prediction is None:
             review = {'required': True, 'reasons': ['No generated prediction. Run the local audit.']}
         else:
-            review = trace.get('review', {'required': bool(trace.get('warnings')), 'reasons': trace.get('warnings', [])})
+            review = dict(trace.get('review', {'required': True, 'reasons': ['Audit trace is missing. Run the local audit.']}))
+        review['reasons'] = list(review.get('reasons',[])) + self.integrity
+        review['required'] = review.get('required',False) or bool(self.integrity)
         return {'request': request, 'prediction': prediction, 'user': user, 'trace': trace, 'review': review,
                 'identity_history': [r for r in self.history if r['user_id'] == uid and r['event_time'] <= request['audit_at']],
                 'rules': self.rules}
@@ -91,7 +106,7 @@ class Store:
                 'review_required': sum(c['review_required'] for c in cases), 'evidence_files': len(self.files),
                 'last_run': datetime.fromtimestamp(output.stat().st_mtime, timezone.utc).isoformat() if output.exists() else None,
                 'usage': self.usage, 'metrics': {k: v for k, v in self.metrics.items() if k not in {'differences', 'unresolved'}},
-                'job': self.job}
+                'job': self.job, 'integrity': self.integrity}
 
     def source(self, source_id):
         if source_id in self.files:
@@ -185,6 +200,9 @@ def make_handler(store):
                             raise KeyError('Not a file')
                         return self.send(200, source.read_bytes(), mimetypes.guess_type(source.name)[0] or 'application/octet-stream')
                     if path == '/api/export':
+                        store.refresh()
+                        if store.integrity:
+                            return self.send(409, {'error': store.integrity[0]})
                         output = store.root/'output.csv'
                         return self.send(200, output.read_bytes(), 'text/csv; charset=utf-8',
                                          {'Content-Disposition': 'attachment; filename="output.csv"'})

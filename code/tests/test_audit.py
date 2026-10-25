@@ -4,6 +4,7 @@ import json
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 from dataclasses import replace
 from pathlib import Path
 
@@ -122,6 +123,13 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(prediction['deletion_status'], 'INCOMPLETE')
         self.assertEqual(json.loads(prediction['steps_json'])[0]['evidence_id'], 'synthetic_evidence_0')
 
+    def test_failed_lookup_cannot_be_hidden_by_same_time_absence(self):
+        a = self.auditor([(TIME,{'records':[
+            {'resource_id':'account_440','email':'old@fiction.test','result':'NOT_FOUND'},
+            {'resource_id':'account_440','email':'old@fiction.test','status_code':503,'result':'NOT_FOUND'}]})])
+        with self.assertRaisesRegex(ValueError,'Unproven resource state'):
+            a.audit(self.request)
+
     def test_non_deletion_does_not_create_actions(self):
         a = self.auditor([(TIME, {'records': [{'resource_id':'account_440', 'email':'old@fiction.test'}]})])
         prediction, _ = a.audit(dict(self.request, request_text='Send me an export. Do not delete my account.'))
@@ -169,6 +177,17 @@ class IntegrationTests(unittest.TestCase):
         from main import run
         with self.assertRaisesRegex(ValueError,'require review'):
             run(self.root,self.root/'deletion_requests.csv',output,self.root/'cache',self.root/'trace.json',strict_review=True)
+        self.assertEqual(output.read_text(encoding='utf-8'),'existing export')
+
+    def test_engine_change_during_run_preserves_existing_export(self):
+        self.auditor([(TIME,{'records':[{'resource_id':'account_440','email':'old@fiction.test'}]})])
+        self.write_csv('deletion_requests.csv',[self.request])
+        output = self.root/'output.csv'
+        output.write_text('existing export',encoding='utf-8')
+        from main import run
+        with patch('main.engine_fingerprint',side_effect=['before','after']):
+            with self.assertRaisesRegex(ValueError,'Engine files changed'):
+                run(self.root,self.root/'deletion_requests.csv',output,self.root/'cache',self.root/'trace.json')
         self.assertEqual(output.read_text(encoding='utf-8'),'existing export')
 
     def test_reverse_and_multiple_reference_hops_recover_cleaned_records(self):

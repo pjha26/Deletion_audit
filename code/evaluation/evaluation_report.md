@@ -1,6 +1,8 @@
 # Evaluation report
 
-Generated: 2026-10-25T15:51:43.711922+00:00. Public samples were used iteratively during development; no independent hidden-set accuracy is claimed. Prediction code never loads public sample labels. Metrics include unresolved public cases as failures.
+Generated: 2026-10-25T16:13:28.496048+00:00. Public samples were used iteratively during development; no independent hidden-set accuracy is claimed. Prediction code never loads public sample labels. Metrics include unresolved public cases as failures.
+
+Finalization safety: malformed requests fail before export; failed HTTP lookups cannot prove absence; cited proof must belong to the selected case resource; duplicate steps and empty COMPLETE proofs are rejected. Atomic writes preserve the previous export on replacement failure. Source, engine, CSV and trace fingerprints bind this report to the actual full run. The UI blocks stale exports and shows REVIEW for COMPLETE predictions with unresolved evidence limitations. These reliability changes did not raise public-sample accuracy.
 
 ## Measured public-sample results
 
@@ -61,7 +63,7 @@ The executable fixtures are in `code/tests/test_audit.py` and `code/tests/test_e
 | Shared ticket still contains another customer's email | Preserve other-customer context when subject PII is already redacted | `test_shared_support_keeps_other_subject_contact_information` |
 | Restore activity names a copy but no readback exists | Expose missing proof; do not invent a present record | `test_restore_link_discovers_copy_but_does_not_assume_its_state` |
 
-Additional checks cover input-order invariance, case-ID renaming, reported-status independence, future evidence validation, multilingual intent, multiline identifiers, split traces, all-identifier anonymization, record-versus-collector attribution, strict review preservation, local host/origin validation and evidence path allowlists. Latest measured test run: 35 tests, 0 failures, 0 errors; measured 2026-10-25T15:49:37.244398+00:00. Reproduce with `python code/evaluation/checks.py`.
+Additional checks cover input-order invariance, case-ID renaming, reported-status independence, future evidence validation, multilingual intent, multiline identifiers, split traces, all-identifier anonymization, record-versus-collector attribution, strict review preservation, local host/origin validation and evidence path allowlists. Latest measured test run: 43 tests, 0 failures, 0 errors; measured 2026-10-25T16:13:20.579198+00:00. Reproduce with `python code/evaluation/checks.py`.
 
 ## Full participant run
 
@@ -81,7 +83,7 @@ Packaging is verified by extracting the source archive to a separate workspace d
 
 Run `python code/ui.py`. The local-only audit desk reads the real CSV, trace, manifest and measured evaluation. Its case index, resource map, identifier history, observation timeline, ordered remediation, original artifact viewer and evaluation ledger expose uncertainty rather than hiding it. `COMPLETE` is labeled as the corpus prediction, with review requirements shown separately. No production deletion or external inference is triggered. The server binds loopback, checks Host and Origin on actions, requires a custom local header, serves only allowlisted evidence IDs and has no arbitrary command or upload endpoint.
 
-Measured browser verification: Real request queue loaded without seeded demonstration data; Run audit control completed real inference and refreshed reports; Clickable map and ordered remediation ledger; Original text source viewer and modal close; Search, case switching and verdict filters; Complete evidence library, search, original PNG and PDF views; Measured evaluation, readable failure audit and CSV download; 390px mobile and 768px tablet layouts without page overflow. Viewports: [1440, 390, 768]; browser errors: 0. Measured 2026-10-25T14:25:36.704Z.
+Measured browser verification: Real request queue loaded without seeded demonstration data; Run audit control completed real inference and refreshed reports; Clickable map and ordered remediation ledger; Original text source viewer and modal close; Search, case switching and verdict filters; Complete evidence library, search, original PNG and PDF views; Measured evaluation, readable failure audit and CSV download; 390px mobile and 768px tablet layouts without page overflow. Viewports: [1440, 390, 768]; browser errors: 0. Measured 2026-10-25T16:10:39.808Z.
 
 `python code/main.py --strict-review` refuses to overwrite predictions if any review warning remains. Default challenge export preserves the required three-status schema; review details stay in the trace and UI. See `failure_audit.md` for source-by-source diagnosis of every current public mismatch.
 

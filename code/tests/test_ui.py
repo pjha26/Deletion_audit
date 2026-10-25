@@ -5,6 +5,7 @@ import sys
 import tempfile
 import threading
 import unittest
+from unittest.mock import patch
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 
@@ -61,6 +62,12 @@ class UIEndpointTests(unittest.TestCase):
             self.assertGreater(len(body),20)
             self.assertIn("script-src 'self'",headers['Content-Security-Policy'])
             self.assertEqual(headers['X-Content-Type-Options'],'nosniff')
+
+    def test_stale_output_cannot_be_exported(self):
+        self.store.integrity = ['Stale output']
+        with patch.object(self.store,'refresh'):
+            self.assertEqual(self.request('/api/export')[0],409)
+        self.store.refresh()
 
 
 if __name__ == '__main__':

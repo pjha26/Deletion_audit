@@ -111,6 +111,9 @@ def classify(resource: str, payload: dict, collection: str = '') -> tuple[str, s
 
 
 def observed_state(category: str, payload: dict) -> str:
+    status = payload.get('status_code',payload.get('http_status'))
+    if status is not None and str(status) not in {'200','201','204','404'}:
+        return 'UNKNOWN'
     result = str(payload.get('result', '')).upper()
     if result in STATE_MAP:
         return STATE_MAP[result]
@@ -368,7 +371,10 @@ class Evidence:
             time = line[:20] if re.match(r'\d{4}-\d{2}-\d{2}T', line) else entry['captured_at']
             system, category = classify(resource, p)
             state = ''
-            if p.get('result', '').upper() in STATE_MAP:
+            http_status = p.get('http_status',p.get('status_code'))
+            if http_status is not None and str(http_status) not in {'200','201','204','404'}:
+                state = 'UNKNOWN'
+            elif p.get('result', '').upper() in STATE_MAP:
                 state = STATE_MAP[p['result'].upper()]
             elif 'rows' in p:
                 state = 'PRESENT' if int(p['rows']) else 'ABSENT'

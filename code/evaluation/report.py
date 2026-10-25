@@ -10,6 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'code'))
 from intent import DELETE_EXAMPLES, OTHER_EXAMPLES
+from main import input_fingerprint, engine_fingerprint
 
 
 def sha(path):
@@ -34,6 +35,11 @@ def write_reports():
         predictions = list(csv.DictReader(f))
     if usage['requests'] != len(requests) or len(predictions) != len(requests):
         raise ValueError('Usage must describe the final full-dataset output run')
+    if (usage.get('output_sha256') != sha(ROOT/'output.csv') or
+        usage.get('trace_sha256') != sha(ROOT/'work/audit_traces.json') or
+        usage.get('input_sha256') != input_fingerprint(ROOT/'dataset',ROOT/'dataset/deletion_requests.csv') or
+        usage.get('engine_sha256') != engine_fingerprint()):
+        raise ValueError('Reports require a fresh, fingerprint-matched full audit run')
     warning_count = sum(bool(t['warnings']) for t in traces)
     no_primary = sum(t['intent']['authorized'] and not any(r['category'] in {'USER_PROFILE','ACCOUNT_TOMBSTONE'} for r in t.get('resources', [])) for t in traces)
     pct = lambda value: f'{100*value:.2f}%'
@@ -41,6 +47,8 @@ def write_reports():
     report = f'''# Evaluation report
 
 Generated: {stamp}. Public samples were used iteratively during development; no independent hidden-set accuracy is claimed. Prediction code never loads public sample labels. Metrics include unresolved public cases as failures.
+
+Finalization safety: malformed requests fail before export; failed HTTP lookups cannot prove absence; cited proof must belong to the selected case resource; duplicate steps and empty COMPLETE proofs are rejected. Atomic writes preserve the previous export on replacement failure. Source, engine, CSV and trace fingerprints bind this report to the actual full run. The UI blocks stale exports and shows REVIEW for COMPLETE predictions with unresolved evidence limitations. These reliability changes did not raise public-sample accuracy.
 
 ## Measured public-sample results
 

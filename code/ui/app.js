@@ -48,6 +48,7 @@ async function loadSummary(keepCase = true) {
     [s.evidence_files, "SOURCES", "Local evidence files", ""]
   ].map(([n, label, note, color]) => `<div class="stat ${color}"><span>${label}</span><strong>${n}</strong><em>${note}</em></div>`).join("");
   $("#last-run").textContent = s.last_run ? `LAST RUN ${date(s.last_run, true).toUpperCase()}` : "NO AUDIT RUN YET";
+  if (s.integrity?.length) $("#last-run").textContent = "OUTPUT NEEDS A FRESH AUDIT · EXPORT BLOCKED";
   renderQueue();
   const id = keepCase && state.selected && s.cases.some(c => c.case_id === state.selected) ? state.selected : s.cases[0]?.case_id;
   if (id) await selectCase(id);
@@ -89,9 +90,10 @@ function renderDossier() {
   const findings = steps().filter(s => s.phase === "FINDING").length;
   const evidence = [...new Set(resources().map(r => r.evidence))];
   const review = d.review;
+  const stamp = status === "COMPLETE" && review.required ? "REVIEW" : status;
   $("#dossier").innerHTML = `<header class="dossier-top">
     <div class="dossier-kicker"><span class="case-tag">${esc(d.request.case_id.toUpperCase().replace("_", " / "))}</span><span>AUDIT CUTOFF</span><span>${esc(date(d.request.audit_at, true).toUpperCase())}</span></div>
-    <div class="person-line"><div><h2 class="person-name">${esc(d.user.name)}</h2><p class="email-line">${esc(d.request.email)} <span>↳ ${esc(d.trace.user_id || "request subject")}</span></p></div><div class="stamp ${esc(status)}" aria-label="Audit prediction: ${esc(labels[status])}">${esc(status === "NOT_APPLICABLE" ? "NO DELETION" : status)}</div></div>
+    <div class="person-line"><div><h2 class="person-name">${esc(d.user.name)}</h2><p class="email-line">${esc(d.request.email)} <span>↳ ${esc(d.trace.user_id || "request subject")}</span>${stamp !== status ? ` · CSV verdict: ${esc(status)}` : ""}</p></div><div class="stamp ${esc(stamp)}" aria-label="Audit prediction: ${esc(labels[status])}; ${review.required ? "review required" : "no review warnings"}">${esc(stamp === "NOT_APPLICABLE" ? "NO DELETION" : stamp)}</div></div>
     <blockquote class="request-text">${esc(d.request.request_text)}</blockquote>
     ${status === "NOT_APPLICABLE" ? '<div class="review-strip clear">✓ This request does not authorize deletion. No remediation or deletion verification is proposed.</div>' : review.required ? `<div class="review-strip"><span>△</span><span><strong>Review required.</strong> ${esc(review.reasons[0] || "The evidence has unresolved limitations.")} <button class="source-button" data-tab="decision">Read decision notes ↗</button></span></div>` : `<div class="review-strip clear">✓ ${findings ? `${findings} supported ${findings === 1 ? "finding" : "findings"}. The ordered plan is ready for review.` : "The discovered resources meet the supplied policy in the available evidence."}</div>`}
   </header>

@@ -27,6 +27,10 @@ The Run audit button executes the same local CLI and evaluation commands and ref
 
 ## Run and evaluate
 
+For final submission, run `python code/finalize.py`. It stops on any failed check, runs the authored tests and public evaluation, regenerates all 518 predictions, refreshes measured reports, validates source citations, and builds the three files in `../outputs/`. `submission_manifest.md` contains their SHA-256 checksums. The detailed command output is saved in `work/finalize.log`.
+
+Exports are written atomically, preserving the previous file if a write fails. Request schema, unique IDs and UTC cutoffs are validated before processing. Input, engine, CSV and trace fingerprints detect stale or altered results. The desk blocks export until a fresh audit when those fingerprints differ. A COMPLETE corpus verdict with unresolved evidence limitations displays a REVIEW stamp; the required challenge CSV retains its three official statuses. Failed HTTP lookups are unknown state, never proof of absence.
+
 ```text
 python code/main.py --dataset dataset --output output.csv
 python -m unittest discover -s code/tests -v

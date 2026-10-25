@@ -278,3 +278,27 @@ branch=main
 repo_root=C:/Users/push1/Documents/Codex/2026-10-25/ghost-data-still-exists-northstar-shop/hackerrank-orchestrate-october26
 worktree=main
 parent_agent=none
+
+## [2026-10-25T16:15:00Z] Overall core reliability and submission finalization
+
+User Prompt (verbatim, secrets redacted):
+[@Ponytail](plugin://ponytail@ponytail) porceed with the next step which is best related to the implemenation part try immproving the overall or the core functionality as we have to submit this within 1 hr from now , so run a overalll fix or the overall  improvement not step by step as we do not have much time left for now and make sure that atleast the core that was said to be built is delivered
+
+Agent Response Summary:
+Completed a focused overall reliability pass on the existing offline audit agent and investigation desk. Failed HTTP reads cannot prove deletion, same-time unknown reads block unsupported completeness, citations must belong to the selected case resource, malformed requests and duplicate steps are rejected, and exports use atomic replacement. Input/engine/output/trace fingerprints prevent stale submission packaging or UI exports; source or engine changes during a run preserve the previous export. Added a single finalize command covering tests, sample evaluation, all requests, reports and packaging. Public sample scores remain 31/32 statuses and 15/32 exact cases; no accuracy increase or production-wide deletion certificate is claimed.
+
+Actions:
+* Added authored regressions for failed reads, proof provenance, input validation, atomic failures, stale exports, source fingerprints and engine changes.
+* Ran the full 518-request pipeline and all 94 evidence files; the CSV remains byte-identical to the previously grounded predictions.
+* Verified a cold OCR run with 11 model calls, zero cache hits and the same CSV SHA-256.
+* Tested the actual UI in isolated Chrome at desktop, tablet and mobile sizes, including a real audit rerun and export; no browser errors.
+* Extracted code.zip, ran the packaged tests and reproduced the exact submission CSV using the external participant dataset.
+* Preserved participant inputs, retained-record policy and label isolation; no paid API dependency added.
+
+Context:
+tool=Codex
+model=gpt-6.1-sol
+branch=main
+repo_root=C:/Users/push1/Documents/Codex/2026-10-25/ghost-data-still-exists-northstar-shop/hackerrank-orchestrate-october26
+worktree=main
+parent_agent=none

@@ -593,6 +593,7 @@ kbd {
   position:absolute;
   opacity:.25
 }
+.stamp.REVIEW { color: #87651e; }
 .stamp.COMPLETE {
   color:var(--green)
 }
