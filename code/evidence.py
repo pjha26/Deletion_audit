@@ -49,11 +49,22 @@ def prefix(resource: str) -> str:
 
 def tokens(value: Any) -> set[str]:
     if isinstance(value, dict):
-        return set().union(*(tokens(v) for v in value.values())) if value else set()
+        result = set().union(*(tokens(v) for v in value.values())) if value else set()
+        for key, item in value.items():
+            if 'phone' in key.lower() and item:
+                digits = re.sub(r'\D', '', str(item))
+                if 7 <= len(digits) <= 15:
+                    result.add('phone:' + digits)
+        return result
     if isinstance(value, (list, tuple)):
         return set().union(*(tokens(v) for v in value)) if value else set()
     text = str(value)
-    return {m.group().casefold() for m in TOKEN.finditer(text)}
+    result = {m.group().casefold() for m in TOKEN.finditer(text)}
+    for phone in re.findall(r'\+[0-9][0-9 ()-]{5,}[0-9]', text):
+        digits = re.sub(r'\D', '', phone)
+        if 7 <= len(digits) <= 15:
+            result.add('phone:' + digits)
+    return result
 
 
 def is_true(value: Any) -> bool:
@@ -314,8 +325,11 @@ class Evidence:
             trace = p.get('trace_id') or p.get('request_id')
             if trace:
                 history = traces.setdefault(trace, {})
-                history.update(p)
-                p = dict(history)
+                context_keys = {'lookup_key', 'match_key', 'subject_key', 'scan_key', 'owner_key',
+                                'subject_ref', 'subject_reference', 'correlation_key', 'service', 'resource_id'}
+                previous = dict(history)
+                history.update({k: v for k, v in p.items() if k in context_keys})
+                p = dict(previous, **p)
             resource = p.get('resource_id')
             if not resource or not re.fullmatch(RESOURCE, resource):
                 continue

@@ -1,13 +1,12 @@
 """Identity resolution, temporal evidence reconciliation, policy and deterministic planning."""
 from collections import defaultdict
-from dataclasses import asdict, replace
+from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
 import json
 import re
 
-from evidence import (Evidence, Observation, RESOURCE, SYSTEMS, CATEGORIES, STATE_MAP,
-                      classify, prefix, rows, tokens)
+from evidence import Evidence, Observation, RESOURCE, CATEGORIES, prefix, rows, tokens, scalar_items
 from intent import IntentModel
 
 OPERATIONS = {
@@ -156,12 +155,21 @@ class Auditor:
                 values |= tokens([row['old_value'], row['new_value']])
         return uid, values
 
-    def policy(self, obs):
+    def policy(self, obs, at=None):
+        at = at or obs.time
+        if obs.category in {'SECURITY_AUDIT_LOG', 'LEGAL_HOLD_RECORD'}:
+            until = obs.payload.get('retention_until') or obs.payload.get('retained_until')
+            if until and until <= at:
+                raise ValueError(f'Retention condition expired for {obs.resource}; no fallback policy supplied')
+            if obs.category == 'LEGAL_HOLD_RECORD' and obs.payload.get('hold_active') is False:
+                raise ValueError(f'Legal hold inactive for {obs.resource}; no fallback policy supplied')
         if obs.category == 'DATA_FLOW':
             return 'DISABLE'
         if obs.category == 'BACKUP_ARCHIVE':
             if self.actions.get(obs.category) != 'RETAIN':
                 raise ValueError('Unsupported backup policy')
+            if str(obs.payload.get('archive_present', 'true')).lower() in {'false', '0'}:
+                raise ValueError('Required retained archive is missing; restore-access denial alone cannot prove retention')
             return 'BLOCK'
         if obs.category not in self.actions:
             raise ValueError(f'No supplied policy for {obs.category}')
@@ -179,7 +187,6 @@ class Auditor:
         for token in identifiers:
             selected |= {i for i in self.by_token.get(token, ()) if eligible(self.evidence.observations[i])}
         resources = {self.evidence.observations[i].resource for i in selected}
-        from evidence import scalar_items
         for i in selected:
             resources |= {v for k, v in scalar_items(self.evidence.observations[i].payload)
                           if k in {'source_resource_id', 'parent_resource_id'} and isinstance(v, str) and re.fullmatch(RESOURCE, v)}
@@ -223,12 +230,30 @@ class Auditor:
             severity = {'ABSENT': 0, 'REDACTED': 1, 'ANONYMIZED': 1, 'DISABLED': 1, 'BLOCKED': 1,
                         'PRESENT': 2, 'EXPOSED': 3, 'ACTIVE': 3}
             obs = max(current, key=lambda o: (severity.get(o.state, 0), o.rank, o.evidence))
+            replicas = defaultdict(list)
+            for item in group:
+                if 'replica' in item.store:
+                    replicas[item.store].append(item)
+            for physical in replicas.values():
+                replica = max(physical, key=lambda o: (o.time, severity.get(o.state, 0)))
+                # A newer primary read cannot establish that an older independent replica was cleaned.
+                if replica.state in {'PRESENT', 'EXPOSED', 'ACTIVE'} and obs.state in {'ABSENT', 'REDACTED', 'ANONYMIZED', 'DISABLED', 'BLOCKED'}:
+                    obs = replica
+                    trace['warnings'].append(replica.resource + ': surviving replica has no subsequent cleanup proof')
             consistent = [o for o in group if o.state == obs.state and o.time[:10] == newest[:10]]
-            obs = max(consistent, key=lambda o: (o.rank, o.time, o.evidence))
+            if consistent:
+                obs = max(consistent, key=lambda o: (o.rank, o.time, o.evidence))
             latest.append(obs)
         if not latest:
             raise ValueError(f"No auditable resources for {request['case_id']}")
-        status, steps = make_steps(latest, self.policy)
+        status, steps = make_steps(latest, lambda obs: self.policy(obs, cutoff))
+        if not any(o.category in {'USER_PROFILE', 'ACCOUNT_TOMBSTONE'} for o in latest):
+            trace['warnings'].append('No primary account/tombstone resource could be explicitly linked; verification scope is limited to discovered resources')
+        if intent['supported_fraction'] < 0.2:
+            trace['warnings'].append('Low training-vocabulary coverage; intent score is not calibrated confidence')
+        for obs in latest:
+            if 'identity_conflict' in obs.payload:
+                trace['warnings'].append(obs.resource + ': ' + obs.payload['identity_conflict'])
         trace.update(user_id=uid, identifiers=sorted(identifiers), resources=[asdict(o) for o in latest])
         return {'case_id': request['case_id'], 'deletion_status': status,
                 'steps_json': json.dumps(steps, ensure_ascii=False, separators=(',', ':'))}, trace
