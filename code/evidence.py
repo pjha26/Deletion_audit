@@ -136,6 +136,8 @@ class Observation:
 
     @property
     def identifiers(self) -> set[str]:
+        if 'catalog_link' in self.payload:
+            return tokens(self.payload['catalog_link'])
         return tokens(self.payload)
 
 
@@ -283,7 +285,7 @@ class Evidence:
                         continue
                     payload = json.loads(record['record_json']) if 'record_json' in record else record
                     self.add(record['resource_id'], payload, entry, f'{table}[{index}]',
-                             system=record.get('origin_system', ''), time=entry['captured_at'], store=table)
+                             system=record.get('origin_system', ''), time=entry['captured_at'], store=table, rank=4)
                 if table.startswith('customer_profiles'):
                     self.scopes.append(dict(system='account_service', category='USER_PROFILE',
                         time=entry['captured_at'], available_at=entry['captured_at'], evidence=entry['file_id'],
@@ -386,7 +388,9 @@ class Evidence:
                 category = 'MARKETING_PROFILE'
                 state = 'PRESENT'
             self.add(resource, p, entry, f'line {no}', time=time,
-                     system=p.get('system', system), category=p.get('record_type', category), state=state)
+                     system=p.get('system', system), category=p.get('record_type', category), state=state,
+                     rank=4 if event.endswith('_read_completed') and any(k in p for k in
+                         {'archive_present', 'customer_reference', 'requester_email', 'owner_email', 'email_hash'}) else 2)
 
     def read_document(self, text, entry):
         # Structured rows appear in admin screens; retain surrounding document separately for links.

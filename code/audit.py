@@ -42,6 +42,8 @@ def make_steps(resources, policy):
     result, incomplete = [], False
     decisions = []
     for obs in resources:
+        if obs.state not in {'ABSENT', 'PRESENT', 'EXPOSED', 'REDACTED', 'ANONYMIZED', 'ACTIVE', 'DISABLED', 'BLOCKED'}:
+            raise ValueError(f'Unproven resource state: {obs.resource}/{obs.state}')
         action = policy(obs)
         target, remediation, verification = TARGETS[action]
         compliant = obs.state == target or (action == 'RETAIN' and obs.state != 'ABSENT')
@@ -180,6 +182,7 @@ class Auditor:
         intent = self.intent.predict(request['request_text'])
         trace = {'case_id': request['case_id'], 'intent': intent, 'warnings': []}
         if not intent['authorized']:
+            trace.update(review={'required': False, 'reasons': [], 'scope': 'No deletion authorized'}, linkage=[], timeline=[])
             return {'case_id': request['case_id'], 'deletion_status': 'NOT_APPLICABLE', 'steps_json': '[]'}, trace
         uid, identifiers = self.identities(request)
         cutoff = request['audit_at']
@@ -188,6 +191,12 @@ class Auditor:
         for token in identifiers:
             selected |= {i for i in self.by_token.get(token, ()) if eligible(self.evidence.observations[i])}
         resources = {self.evidence.observations[i].resource for i in selected}
+        linkage = []
+        for i in sorted(selected):
+            observation = self.evidence.observations[i]
+            matched = sorted(identifiers & observation.identifiers)
+            linkage.append({'resource_id': observation.resource, 'basis': 'catalog' if 'catalog_link' in observation.payload else 'exact_identifier',
+                            'identifiers': matched, 'evidence_id': observation.evidence, 'location': observation.location})
         for i in selected:
             resources |= {v for k, v in scalar_items(self.evidence.observations[i].payload)
                           if k in {'source_resource_id', 'parent_resource_id'} and isinstance(v, str) and re.fullmatch(RESOURCE, v)}
@@ -195,7 +204,9 @@ class Auditor:
         for activity, linked_tokens in self.activity_tokens:
             if activity['event_time'] <= cutoff and identifiers & linked_tokens:
                 resources.add(activity['resource_id'])
-        if not any(prefix(r) == 'account' for r in resources):
+                linkage.append({'resource_id': activity['resource_id'], 'basis': 'activity_identity',
+                                'identifiers': sorted(identifiers & linked_tokens), 'evidence_id': activity['activity_id'], 'location': activity['details']})
+        if not any(prefix(r) in {'account', 'tombstone'} for r in resources):
             # shortcut: time correlation is weaker than a request ID, replace when explicit workflow correlation IDs are available.
             # Legacy workflow events lack subject fields. A unique nearby primary operation
             # supplies a candidate resource; readback evidence must still establish its state.
@@ -206,6 +217,8 @@ class Auditor:
                           and abs((datetime.fromisoformat(a['event_time'].replace('Z', '+00:00')) - reported).total_seconds()) <= 600}
             if len(candidates) == 1:
                 resources |= candidates
+                linkage.extend({'resource_id': resource, 'basis': 'workflow_time', 'identifiers': [], 'evidence_id': '',
+                                'location': 'Unique primary operation within ten minutes of workflow report; candidate link only'} for resource in sorted(candidates))
                 trace['warnings'].append('Primary resource linked by unique workflow-time correlation; no explicit subject key in legacy event')
         for resource in list(resources):
             selected |= {i for i in self.by_resource.get(resource, ()) if eligible(self.evidence.observations[i])}
@@ -256,7 +269,18 @@ class Auditor:
         for obs in latest:
             if 'identity_conflict' in obs.payload:
                 trace['warnings'].append(obs.resource + ': ' + obs.payload['identity_conflict'])
-        trace.update(user_id=uid, identifiers=sorted(identifiers), resources=[asdict(o) for o in latest])
+        trace['warnings'] = list(dict.fromkeys(trace['warnings']))
+        timeline = [{'resource_id': o.resource, 'system_id': o.system, 'state': o.state, 'time': o.time,
+                     'container_captured_at': o.container_captured_at, 'evidence_id': o.evidence, 'location': o.location,
+                     'included': eligible(o)} for resource in sorted(resources) for i in self.by_resource.get(resource, ())
+                    for o in [self.evidence.observations[i]]]
+        timeline.sort(key=lambda event: (event['time'], event['system_id'], event['resource_id'], event['evidence_id']))
+        trace.update(user_id=uid, identifiers=sorted(identifiers), resources=[asdict(o) for o in latest],
+                     linkage=linkage, timeline=timeline,
+                     review={'required': bool(trace['warnings']), 'reasons': trace['warnings'],
+                             'scope': 'Discovered participant-corpus resources',
+                             'primary_linked': any(o.category in {'USER_PROFILE', 'ACCOUNT_TOMBSTONE'} for o in latest),
+                             'excluded_observations': sum(not event['included'] for event in timeline)})
         return {'case_id': request['case_id'], 'deletion_status': status,
                 'steps_json': json.dumps(steps, ensure_ascii=False, separators=(',', ':'))}, trace
 

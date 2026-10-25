@@ -50,6 +50,10 @@ class PlanningTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'retained resource missing'):
             make_steps([observation('audit_record_921', 'SECURITY_AUDIT_LOG', 'ABSENT')], lambda o: 'RETAIN')
 
+    def test_unknown_state_cannot_be_called_complete(self):
+        with self.assertRaisesRegex(ValueError, 'Unproven resource state'):
+            make_steps([observation('audit_record_921', 'SECURITY_AUDIT_LOG', 'UNKNOWN')], lambda o: 'RETAIN')
+
     def test_planner_invariant_to_input_order(self):
         records = [observation('account_9', 'USER_PROFILE', 'PRESENT'), observation('account_2', 'USER_PROFILE', 'ABSENT')]
         self.assertEqual(make_steps(records, lambda o: 'DELETE'), make_steps(list(reversed(records)), lambda o: 'DELETE'))
@@ -137,6 +141,21 @@ class IntegrationTests(unittest.TestCase):
         prediction, trace = a.audit(self.request)
         self.assertEqual(prediction['deletion_status'], 'INCOMPLETE')
         self.assertTrue(any('replica' in warning for warning in trace['warnings']))
+
+    def test_trace_exposes_basis_and_excluded_observations(self):
+        a = self.auditor([(TIME, {'records': [{'resource_id':'account_440', 'email':'old@fiction.test'}]}),
+            ('2026-01-11T00:00:00Z', {'records': [{'resource_id':'account_440', 'result':'NOT_FOUND'}]})])
+        _, trace = a.audit(self.request)
+        self.assertEqual(trace['linkage'][0]['basis'], 'exact_identifier')
+        self.assertEqual(trace['review']['excluded_observations'], 1)
+        self.assertFalse(trace['review']['required'])
+        self.assertFalse(trace['timeline'][-1]['included'])
+
+    def test_catalog_display_fields_do_not_merge_another_person(self):
+        item = observation('account_440', 'USER_PROFILE', 'PRESENT', payload={
+            'catalog_link':'resource belongs to owner@fiction.test', 'business_fields':'displayed other@fiction.test'})
+        self.assertIn('owner@fiction.test', item.identifiers)
+        self.assertNotIn('other@fiction.test', item.identifiers)
 
 
 class IntentTests(unittest.TestCase):

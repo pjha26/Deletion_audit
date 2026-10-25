@@ -12,7 +12,7 @@ from evidence import rows
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def run(dataset, requests_path, output, cache, trace_path):
+def run(dataset, requests_path, output, cache, trace_path, strict_review=False):
     started = time.perf_counter()
     auditor = Auditor(dataset, cache)
     requests = rows(requests_path)
@@ -24,6 +24,9 @@ def run(dataset, requests_path, output, cache, trace_path):
     evidence_ids = {r['file_id'] for r in rows(dataset / 'evidence_files.csv')}
     evidence_ids |= {r['activity_id'] for r in auditor.activity} | {r['audit_id'] for r in auditor.history}
     validate(predictions, requests, evidence_ids)
+    review_count = sum(t.get('review', {}).get('required', False) for t in traces)
+    if strict_review and review_count:
+        raise ValueError(f'{review_count} cases require review; refusing to overwrite predictions in strict mode')
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.open('w', encoding='utf-8', newline='') as stream:
         writer = csv.DictWriter(stream, fieldnames=['case_id', 'deletion_status', 'steps_json'])
@@ -37,6 +40,7 @@ def run(dataset, requests_path, output, cache, trace_path):
              'ocr_cache_hits': auditor.evidence.cache_hits, 'llm_calls': 0, 'input_tokens': 0, 'output_tokens': 0,
              'api_cost_usd': 0, 'seconds': round(time.perf_counter()-started, 3),
              'evidence_files': len(auditor.evidence.coverage), 'observations': len(auditor.evidence.observations),
+             'review_required': review_count,
              'statuses': dict(Counter(p['deletion_status'] for p in predictions))}
     cache.mkdir(parents=True, exist_ok=True)
     (cache / 'last_usage.json').write_text(json.dumps(usage, indent=2), encoding='utf-8')
@@ -52,5 +56,6 @@ if __name__ == '__main__':
     parser.add_argument('--output', type=Path, default=ROOT / 'output.csv')
     parser.add_argument('--cache', type=Path, default=ROOT / 'work/cache')
     parser.add_argument('--trace', type=Path, default=ROOT / 'work/audit_traces.json')
+    parser.add_argument('--strict-review', action='store_true', help='Refuse export if any case has unresolved review warnings')
     args = parser.parse_args()
-    run(args.dataset, args.requests or args.dataset / 'deletion_requests.csv', args.output, args.cache, args.trace)
+    run(args.dataset, args.requests or args.dataset / 'deletion_requests.csv', args.output, args.cache, args.trace, args.strict_review)
