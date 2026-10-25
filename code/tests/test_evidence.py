@@ -1,5 +1,4 @@
 import sys
-import tempfile
 import unittest
 from pathlib import Path
 
@@ -9,14 +8,13 @@ from evidence import Evidence, observed_state
 
 class ReaderTests(unittest.TestCase):
     def test_trace_keeps_subject_when_completion_has_only_resource(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            e = Evidence(Path(tmp), Path(tmp))
-            e.read_text('2026-01-01T00:00:00Z service=account_service trace_id=x event=profile_lookup_started lookup_key=old@example.com\n'
-                        '2026-01-01T00:00:01Z service=account_service trace_id=x event=profile_lookup_completed resource_id=account_777 rows=1',
-                        {'file_id': 'source', 'captured_at': '2026-01-01T00:00:02Z'})
-            self.assertEqual(len(e.observations), 1)
-            self.assertIn('old@example.com', e.observations[0].identifiers)
-            self.assertEqual(e.observations[0].state, 'PRESENT')
+        e = Evidence(Path('.'), Path('.'))
+        e.read_text('2026-01-01T00:00:00Z service=account_service trace_id=x event=profile_lookup_started lookup_key=old@example.com\n'
+                    '2026-01-01T00:00:01Z service=account_service trace_id=x event=profile_lookup_completed resource_id=account_777 rows=1',
+                    {'file_id': 'source', 'captured_at': '2026-01-01T00:00:02Z'})
+        self.assertEqual(len(e.observations), 1)
+        self.assertIn('old@example.com', e.observations[0].identifiers)
+        self.assertEqual(e.observations[0].state, 'PRESENT')
 
     def test_multiple_log_encodings(self):
         lines = [
