@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#242620">
+  <title>Ghost Protocol — Northstar Audit Desk</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#workspace">Skip to investigation</a>
+  <aside class="rail" aria-label="Workspace navigation">
+    <a class="brand" href="#cases" aria-label="Ghost Protocol home"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 1 24 16 39 20 24 24 20 39 16 24 1 20 16 16Z" fill="currentColor"/><circle cx="20" cy="20" r="5" fill="#242620"/></svg></a>
+    <span class="rail-rule"></span>
+    <button class="nav-button active" data-view="cases" aria-label="Investigations" title="Investigations"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 8h8M8 12h8M8 16h4"/></svg><span>Cases</span></button>
+    <button class="nav-button" data-view="evidence" aria-label="Evidence library" title="Evidence library"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h7l2-3h9v16H3Z"/><path d="M7 12h10M7 16h6"/></svg><span>Files</span></button>
+    <button class="nav-button" data-view="evaluation" aria-label="Evaluation ledger" title="Evaluation ledger"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V4M4 20h17M8 16l4-6 4 3 4-8"/><circle cx="12" cy="10" r="1"/></svg><span>Checks</span></button>
+    <div class="rail-bottom"><span class="local-light"></span><span>LOCAL</span></div>
+  </aside>
+  <div class="shell">
+    <header class="topbar">
+      <a class="wordmark" href="#cases">GHOST<span>/</span>PROTOCOL<span class="edition">AUDIT DESK · 01</span></a>
+      <div class="top-actions"><span id="run-state" class="run-state"><i></i> CORPUS LOADED</span><button id="run-audit" class="button ink small">↻ <span>Run audit</span></button></div>
+    </header>
+    <main id="workspace" tabindex="-1">
+      <section class="masthead">
+        <div><p class="eyebrow">NORTHSTAR SHOP / PRIVACY OPERATIONS</p><h1>Follow what remains<span>.</span></h1><p class="intro">A deletion claim is where the investigation begins.</p></div>
+        <div class="corpus-stats" id="corpus-stats" aria-label="Actual corpus summary"><span>Loading local evidence…</span></div>
+      </section>
+      <div id="job-message" class="job-message" role="status" hidden></div>
+      <section id="cases-view" class="view">
+        <div class="investigation-layout">
+          <aside class="case-index" aria-label="Case index">
+            <div class="index-heading"><h2>Case index</h2><span id="case-count" class="mono">—</span></div>
+            <label class="search"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8" cy="8" r="5"/><path d="m12 12 5 5"/></svg><input id="case-search" type="search" placeholder="Name, email or case…" aria-label="Search cases"><kbd>/</kbd></label>
+            <div class="queue-filters" role="group" aria-label="Filter cases"><button data-filter="all" class="selected">All</button><button data-filter="INCOMPLETE">Open</button><button data-filter="COMPLETE">Clear</button><button data-filter="review">Review</button></div>
+            <div class="queue-caption"><span>RECREATION RISK FIRST</span><span>↓</span></div>
+            <div id="case-list" class="case-list" aria-live="polite"></div>
+            <div class="index-footer"><span class="northstar-mini">✳</span><span>Every copy.<br>Every way back.</span></div>
+          </aside>
+          <article id="dossier" class="dossier" aria-label="Selected investigation"><div class="empty-state">Opening the investigation desk…</div></article>
+        </div>
+      </section>
+      <section id="evidence-view" class="view" hidden></section>
+      <section id="evaluation-view" class="view" hidden></section>
+      <footer class="workspace-footer"><span>LOCAL INFERENCE · SOURCE-BACKED DECISIONS</span><a href="/api/export" class="export-link" download="output.csv">Export all predictions ↗</a><span id="last-run">—</span></footer>
+    </main>
+  </div>
+  <dialog id="source-dialog" class="source-dialog" aria-labelledby="source-title"><div class="source-heading"><div><p class="eyebrow">ORIGINAL EVIDENCE</p><h2 id="source-title">Source record</h2></div><button id="close-source" class="icon-button" aria-label="Close source">×</button></div><div id="source-body"></div></dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>

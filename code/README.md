@@ -10,18 +10,29 @@ Use Python 3.12 (tested). From the repository root, with `dataset/` alongside `c
 python -m venv .venv
 .venv\Scripts\python -m pip install -r code/requirements.txt
 .venv\Scripts\python code/main.py
+.venv\Scripts\python code/ui.py
 ```
 
 On macOS/Linux replace `.venv\Scripts\python` with `.venv/bin/python`. Install dependencies once with internet access; inference then runs locally. ONNX OCR model files are included by the installed RapidOCR package. Keep virtual environments outside `code/`.
 
 The archive deliberately excludes `dataset/`. Obtain the official participant dataset and place it at the root before running. Arbitrary working directories are supported by default paths derived from the script location.
 
+## Ghost Protocol investigation desk
+
+Open `http://127.0.0.1:8765` after `python code/ui.py`. This local Python server serves the included HTML/CSS/JavaScript; Node, npm and a frontend build are not required. Use `--port 8766` if the default port is occupied.
+
+The interface is an evidence dossier: a searchable case queue, subject-to-record map, current/historical identity trail, observed-state timeline with an excluded-observations toggle, ordered remediation ledger, source viewer for original PDFs/images/logs/SQL, and measured evaluation ledger. Every displayed case, number and source comes from the current participant files and generated artifacts. Mobile uses readable selectable system rows rather than shrinking a desktop graph.
+
+The Run audit button executes the same local CLI and evaluation commands and refreshes the output. Export downloads the actual CSV. The UI never executes production deletion actions. Review warnings remain separate from the required challenge status; a green corpus prediction is not an operational deletion certificate. The local service accepts no arbitrary commands, filenames or uploaded datasets.
+
 ## Run and evaluate
 
 ```text
 python code/main.py --dataset dataset --output output.csv
 python -m unittest discover -s code/tests -v
+python code/evaluation/checks.py
 python code/evaluation/main.py --run-samples
+python code/evaluation/failure_audit.py
 python code/evaluation/report.py
 python code/package_submission.py --destination ../outputs
 ```
@@ -31,6 +42,10 @@ The main command validates one row per input case, lexical `case_id` order, exac
 `work/audit_traces.json` contains per-case intent scores, resolved identifiers, selected observations and warnings. `work/cache/coverage.json` records all manifest files. `work/cache/last_usage.json` records the last run. These scratch files contain fictional corpus data and are excluded from the submission archive.
 
 The evaluator catches unresolved sample cases, counts them as failures, and writes detailed differences to `work/evaluation_details.json`. Run the main full-dataset command last before generating usage reports; reports reject usage metadata that does not match the official request count. Public sample answers are read only by the evaluator, never by prediction code.
+
+Run `python code/main.py --strict-review` to refuse CSV overwrite while any case has unresolved review warnings. This operational guard deliberately blocks the current corpus's uncertain cases; default challenge export still writes all required rows and preserves the exact three-status schema.
+
+Optional browser QA is in `code/tests/browser_check.js`. Install Playwright outside `code/`, start the local UI, then run it with Node. `PLAYWRIGHT_MODULE`, `BROWSER_EXECUTABLE` and `AUDIT_URL` can point to an existing local Playwright installation, a fresh-profile browser executable, and the local server. Browser QA is a development dependency only; the application itself uses no JavaScript packages or remote fonts.
 
 ## How it works
 
@@ -65,6 +80,9 @@ The evaluator catches unresolved sample cases, counts them as failures, and writ
 | `tests/` | Authored synthetic cases and regression tests |
 | `evaluation/main.py` | Public-sample comparison |
 | `evaluation/report.py` | Reproducible Markdown evaluation and usage reports |
+| `evaluation/failure_audit.py` | Source-backed public error diagnosis, isolated from prediction code |
+| `evaluation/checks.py` | Measured Python test results |
+| `ui.py`, `ui/` | Local server and investigation UI |
 | `IMPLEMENTATION_PLAN.md` | Build plan and design constraints |
 
 Prompts are not used because there are no LLM calls. All learned intent training text is visible in `intent.py`. The finite-state evidence and policy interpretation is visible in source rather than hidden in generated raw data.

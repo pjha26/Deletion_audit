@@ -1,4 +1,6 @@
 import sys
+import json
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -7,6 +9,20 @@ from evidence import Evidence, observed_state
 
 
 class ReaderTests(unittest.TestCase):
+    def test_record_system_overrides_exporting_collector(self):
+        work = Path(__file__).resolve().parents[2]/'work'
+        work.mkdir(exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=work) as temp:
+            path = Path(temp)/'snapshot.json'
+            path.write_text(json.dumps({'snapshots':[{'data_store':'generic_history_collector',
+                'captured_at':'2026-01-01T00:00:00Z','records':[{'resource_id':'account_719',
+                    'system':'account_service','record_type':'USER_PROFILE','result':'NOT_FOUND',
+                    'lookup_value':'owner@fiction.test'}]}]}),encoding='utf-8')
+            e = Evidence(Path(temp),Path(temp))
+            e.read_json(path,{'file_id':'synthetic','captured_at':'2026-01-01T00:00:00Z'})
+            self.assertEqual(e.observations[0].system,'account_service')
+            self.assertEqual(e.observations[0].state,'ABSENT')
+
     def test_trace_keeps_subject_when_completion_has_only_resource(self):
         e = Evidence(Path('.'), Path('.'))
         e.read_text('2026-01-01T00:00:00Z service=account_service trace_id=x event=profile_lookup_started lookup_key=old@example.com\n'

@@ -157,6 +157,16 @@ class IntegrationTests(unittest.TestCase):
         self.assertIn('owner@fiction.test', item.identifiers)
         self.assertNotIn('other@fiction.test', item.identifiers)
 
+    def test_strict_review_does_not_overwrite_existing_export(self):
+        self.auditor([(TIME, {'records':[{'resource_id':'search_992','email':'old@fiction.test'}]})])
+        self.write_csv('deletion_requests.csv',[self.request])
+        output = self.root/'output.csv'
+        output.write_text('existing export',encoding='utf-8')
+        from main import run
+        with self.assertRaisesRegex(ValueError,'require review'):
+            run(self.root,self.root/'deletion_requests.csv',output,self.root/'cache',self.root/'trace.json',strict_review=True)
+        self.assertEqual(output.read_text(encoding='utf-8'),'existing export')
+
 
 class IntentTests(unittest.TestCase):
     def test_multilingual_and_negation(self):

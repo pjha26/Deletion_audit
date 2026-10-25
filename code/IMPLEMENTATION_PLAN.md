@@ -37,4 +37,7 @@ Separate status accuracy, exact case match, step precision/recall, field agreeme
 - Transcript: append actual development turns; record metadata corrections without rewriting history.
 
 ## Scope
-Build the command-line audit and reviewable reports. Skip a UI, hosted service, vector database and agent orchestration because none is required for a correct submission. Reserve the final two hours for packaging and upload. No submission or interview score is guaranteed.
+Build the command-line audit and reviewable reports. Reserve the final two hours for packaging and upload. No submission or interview score is guaranteed.
+
+## Participant-authorized scope update: investigation UI
+The participant subsequently requested a distinctive UI in addition to the next correctness work. Ship a local, buildless audit desk inside `code/`: searchable case index, actual resource associations, historical identities, observation cutoff timeline, policy-aware remediation ledger, original evidence viewer and honest evaluation. Use a standard-library loopback Python server and self-contained HTML/CSS/JS; no hosted backend, new frontend framework, vector database or remote font is needed. Keep review flags visible and provide a strict export mode. Include UI assets in the code ZIP and test actual interactions at desktop, tablet and mobile sizes. No cloud deployment was requested for this local repository application.

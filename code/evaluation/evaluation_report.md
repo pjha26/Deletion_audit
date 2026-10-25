@@ -1,6 +1,6 @@
 # Evaluation report
 
-Generated: 2026-10-25T13:46:14.530800+00:00. Public samples were used iteratively during development; no independent hidden-set accuracy is claimed. Prediction code never loads public sample labels. Metrics include unresolved public cases as failures.
+Generated: 2026-10-25T14:27:21.493636+00:00. Public samples were used iteratively during development; no independent hidden-set accuracy is claimed. Prediction code never loads public sample labels. Metrics include unresolved public cases as failures.
 
 ## Measured public-sample results
 
@@ -8,11 +8,11 @@ Generated: 2026-10-25T13:46:14.530800+00:00. Public samples were used iterativel
 |---|---:|
 | Cases | 32 |
 | Case-level status accuracy | 96.88% |
-| Exact full-case accuracy, including evidence and step numbers | 43.75% |
+| Exact full-case accuracy, including evidence and step numbers | 46.88% |
 | Step precision, matching phase/operation/system/resource | 97.16% |
 | Step recall with the same matching key | 88.60% |
-| Strict step-level accuracy, all seven fields | 65.28% |
-| Field accuracy over all seven expected step fields | 85.27% |
+| Strict step-level accuracy, all seven fields | 65.80% |
+| Field accuracy over all seven expected step fields | 85.34% |
 | Ordered step-key sequence accuracy | 46.88% |
 | Expected steps | 193 |
 | Predicted steps | 176 |
@@ -33,6 +33,8 @@ The initial evaluation produced 87.50% status accuracy, 21.875% exact-case accur
 - Prevented a primary-only absence from claiming that an independent replica was cleaned.
 - Limited document identity linkage to explicit catalog aliases and local matching rows, preventing unrelated rows in a screenshot or retention register from acquiring the same subject.
 - Included exact historic phone normalization and retained stable tombstone references while checking direct identifiers.
+- Fixed a collector-versus-record system bug: explicit record systems override a generic exporting service. This avoids duplicate cross-system findings on the full corpus.
+- Added explicit provenance, an excluded-observation timeline, strict review export refusal, and a local investigation UI.
 
 ## Authored evaluation cases
 
@@ -49,7 +51,7 @@ The executable fixtures are in `code/tests/test_audit.py` and `code/tests/test_e
 | Replica survives after newer primary absence | Remain incomplete until replica cleanup is proved | `test_new_primary_absence_does_not_prove_replica_clean` |
 | Required retained record is missing | Refuse a complete claim instead of inventing an unsupported repair operation | `test_missing_retained_record_cannot_be_called_complete` |
 
-Additional checks cover input-order invariance, case-ID renaming, reported-status independence, future evidence validation, multilingual intent, multiline identifiers, split traces and all-identifier anonymization. Latest development test run: 17 tests passed. Reproduce with `python -m unittest discover -s code/tests -v`.
+Additional checks cover input-order invariance, case-ID renaming, reported-status independence, future evidence validation, multilingual intent, multiline identifiers, split traces, all-identifier anonymization, record-versus-collector attribution, strict review preservation, local host/origin validation and evidence path allowlists. Latest measured test run: 26 tests, 0 failures, 0 errors; measured 2026-10-25T14:20:11.537217+00:00. Reproduce with `python code/evaluation/checks.py`.
 
 ## Full participant run
 
@@ -60,10 +62,18 @@ Additional checks cover input-order invariance, case-ID renaming, reported-statu
 - Output status counts: {"COMPLETE": 153, "INCOMPLETE": 355, "NOT_APPLICABLE": 10}. These are predictions, not ground-truth accuracy.
 - Cases with review warnings: 264; cases without an explicitly linked primary/tombstone resource: 260.
 - No full-dataset ground truth is available to the solution. Do not present public-sample performance as hidden accuracy.
-- Output SHA-256: `0f5d62075a2afce5b7f2fa5caa930fc9993d9832ca19240d0509e5bd4c0f9cfc`.
+- Output SHA-256: `0932878aee1570be7f149af992c7579e4dd81d107a2f8fa0e267f5b82d47cc5f`.
 - Request CSV SHA-256: `7505a4d31e6fb35d77280c55b224290c5ebb2dd1ce21019222a5f190454bbb2d`.
 
-Packaging was checked by extracting the source archive to a separate workspace directory, running its 17 tests, and running its own CLI against the participant dataset. The extracted code reproduced the exact output SHA-256 above. Archive integrity, source/docs-only contents, exclusion of dataset/environments/caches/nested archives, and common credential patterns were checked. Dependencies were already installed locally; the reproduction does not claim to have tested every operating system or a disconnected dependency installation.
+Packaging is verified by extracting the source archive to a separate workspace directory, running its authored tests, and running its own CLI against the participant dataset. The package check compares the reproduced CSV SHA-256 with the output above. Archive integrity, source/docs/UI assets-only contents, exclusion of dataset/environments/caches/nested archives, and common credential patterns are checked. Dependencies are already installed locally; this does not claim every operating system or a disconnected dependency installation has been tested.
+
+## Investigation UI and review safeguards
+
+Run `python code/ui.py`. The local-only audit desk reads the real CSV, trace, manifest and measured evaluation. Its case index, resource map, identifier history, observation timeline, ordered remediation, original artifact viewer and evaluation ledger expose uncertainty rather than hiding it. `COMPLETE` is labeled as the corpus prediction, with review requirements shown separately. No production deletion or external inference is triggered. The server binds loopback, checks Host and Origin on actions, requires a custom local header, serves only allowlisted evidence IDs and has no arbitrary command or upload endpoint.
+
+Measured browser verification: Real request queue loaded without seeded demonstration data; Run audit control completed real inference and refreshed reports; Clickable map and ordered remediation ledger; Original text source viewer and modal close; Search, case switching and verdict filters; Complete evidence library, search, original PNG and PDF views; Measured evaluation, readable failure audit and CSV download; 390px mobile and 768px tablet layouts without page overflow. Viewports: [1440, 390, 768]; browser errors: 0. Measured 2026-10-25T14:25:36.704Z.
+
+`python code/main.py --strict-review` refuses to overwrite predictions if any review warning remains. Default challenge export preserves the required three-status schema; review details stay in the trace and UI. See `failure_audit.md` for source-by-source diagnosis of every current public mismatch.
 
 ## Remaining failures and practical limits
 
@@ -82,7 +92,6 @@ Operational review is required for catalog/display identity conflicts, lost subj
 - **case_03**: COMPLETE → COMPLETE; missing: VERIFY_RECORD_ANONYMIZED:analytics_9406; extra: none; field differences: 0.
 - **case_04**: COMPLETE → MISSING; missing: VERIFY_RECORD_ABSENT:account_004, VERIFY_RECORD_ANONYMIZED:analytics_901; extra: none; field differences: 0.
 - **case_07**: INCOMPLETE → INCOMPLETE; missing: none; extra: REPORT_REMAINING_RECORD:object_19, DELETE_RECORD:object_19, VERIFY_RECORD_ABSENT:object_19; field differences: 4.
-- **case_09**: INCOMPLETE → INCOMPLETE; missing: none; extra: none; field differences: 1.
 - **case_17**: INCOMPLETE → INCOMPLETE; missing: none; extra: VERIFY_RECORD_ABSENT:account_6523, VERIFY_RECORD_REDACTED:tombstone_17; field differences: 2.
 - **case_18**: INCOMPLETE → INCOMPLETE; missing: VERIFY_RECORD_ABSENT:account_5521, VERIFY_RECORD_PRESENT:audit_record_6645; extra: none; field differences: 4.
 - **case_20**: INCOMPLETE → INCOMPLETE; missing: VERIFY_RECORD_ABSENT:account_5037, VERIFY_RECORD_PRESENT:audit_record_5569; extra: none; field differences: 2.

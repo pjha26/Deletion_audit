@@ -21,6 +21,13 @@ def write_reports():
     usage = json.loads((ROOT/'work/cache/last_usage.json').read_text(encoding='utf-8'))
     coverage = json.loads((ROOT/'work/cache/coverage.json').read_text(encoding='utf-8'))
     traces = json.loads((ROOT/'work/audit_traces.json').read_text(encoding='utf-8'))
+    test_path = ROOT/'work/test_results.json'
+    test_results = json.loads(test_path.read_text(encoding='utf-8')) if test_path.exists() else None
+    test_summary = (f"{test_results['tests']} tests, {test_results['failures']} failures, {test_results['errors']} errors; "
+                    f"measured {test_results['run_at']}") if test_results else 'No measured test report available; run code/evaluation/checks.py'
+    browser_path = ROOT/'work/browser_results.json'
+    browser = json.loads(browser_path.read_text(encoding='utf-8')) if browser_path.exists() else None
+    browser_summary = ('; '.join(browser['checks']) + f". Viewports: {browser['viewports']}; browser errors: {len(browser['console_errors'])}. Measured {browser['run_at']}.") if browser else 'Browser checks have not been recorded.'
     with (ROOT/'dataset/deletion_requests.csv').open(encoding='utf-8', newline='') as f:
         requests = list(csv.DictReader(f))
     with (ROOT/'output.csv').open(encoding='utf-8', newline='') as f:
@@ -66,6 +73,8 @@ The initial evaluation produced 87.50% status accuracy, 21.875% exact-case accur
 - Prevented a primary-only absence from claiming that an independent replica was cleaned.
 - Limited document identity linkage to explicit catalog aliases and local matching rows, preventing unrelated rows in a screenshot or retention register from acquiring the same subject.
 - Included exact historic phone normalization and retained stable tombstone references while checking direct identifiers.
+- Fixed a collector-versus-record system bug: explicit record systems override a generic exporting service. This avoids duplicate cross-system findings on the full corpus.
+- Added explicit provenance, an excluded-observation timeline, strict review export refusal, and a local investigation UI.
 
 ## Authored evaluation cases
 
@@ -82,7 +91,7 @@ The executable fixtures are in `code/tests/test_audit.py` and `code/tests/test_e
 | Replica survives after newer primary absence | Remain incomplete until replica cleanup is proved | `test_new_primary_absence_does_not_prove_replica_clean` |
 | Required retained record is missing | Refuse a complete claim instead of inventing an unsupported repair operation | `test_missing_retained_record_cannot_be_called_complete` |
 
-Additional checks cover input-order invariance, case-ID renaming, reported-status independence, future evidence validation, multilingual intent, multiline identifiers, split traces and all-identifier anonymization. Latest development test run: 17 tests passed. Reproduce with `python -m unittest discover -s code/tests -v`.
+Additional checks cover input-order invariance, case-ID renaming, reported-status independence, future evidence validation, multilingual intent, multiline identifiers, split traces, all-identifier anonymization, record-versus-collector attribution, strict review preservation, local host/origin validation and evidence path allowlists. Latest measured test run: {test_summary}. Reproduce with `python code/evaluation/checks.py`.
 
 ## Full participant run
 
@@ -96,7 +105,15 @@ Additional checks cover input-order invariance, case-ID renaming, reported-statu
 - Output SHA-256: `{sha(ROOT/'output.csv')}`.
 - Request CSV SHA-256: `{sha(ROOT/'dataset/deletion_requests.csv')}`.
 
-Packaging was checked by extracting the source archive to a separate workspace directory, running its 17 tests, and running its own CLI against the participant dataset. The extracted code reproduced the exact output SHA-256 above. Archive integrity, source/docs-only contents, exclusion of dataset/environments/caches/nested archives, and common credential patterns were checked. Dependencies were already installed locally; the reproduction does not claim to have tested every operating system or a disconnected dependency installation.
+Packaging is verified by extracting the source archive to a separate workspace directory, running its authored tests, and running its own CLI against the participant dataset. The package check compares the reproduced CSV SHA-256 with the output above. Archive integrity, source/docs/UI assets-only contents, exclusion of dataset/environments/caches/nested archives, and common credential patterns are checked. Dependencies are already installed locally; this does not claim every operating system or a disconnected dependency installation has been tested.
+
+## Investigation UI and review safeguards
+
+Run `python code/ui.py`. The local-only audit desk reads the real CSV, trace, manifest and measured evaluation. Its case index, resource map, identifier history, observation timeline, ordered remediation, original artifact viewer and evaluation ledger expose uncertainty rather than hiding it. `COMPLETE` is labeled as the corpus prediction, with review requirements shown separately. No production deletion or external inference is triggered. The server binds loopback, checks Host and Origin on actions, requires a custom local header, serves only allowlisted evidence IDs and has no arbitrary command or upload endpoint.
+
+Measured browser verification: {browser_summary}
+
+`python code/main.py --strict-review` refuses to overwrite predictions if any review warning remains. Default challenge export preserves the required three-status schema; review details stay in the trace and UI. See `failure_audit.md` for source-by-source diagnosis of every current public mismatch.
 
 ## Remaining failures and practical limits
 

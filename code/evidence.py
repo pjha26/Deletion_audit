@@ -244,7 +244,7 @@ class Evidence:
                         elif payload['hits'].get('documents'):
                             payload.update(payload['hits']['documents'][0])
                     self.add(resource, payload, entry, location,
-                             system=context.get('data_store', ''),
+                             system=obj.get('system') or obj.get('origin_system') or context.get('data_store', ''),
                              time=obj.get('recorded_at') or obj.get('observed_at') or context.get('captured_at', ''),
                              store=context.get('collection', ''), rank=4 if 'service_exports' in data else 2)
                     return

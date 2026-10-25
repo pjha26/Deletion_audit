@@ -7,6 +7,7 @@ This repository now contains the local deletion audit implementation. Start with
 ```text
 python -m pip install -r code/requirements.txt
 python code/main.py
+python code/ui.py
 python -m unittest discover -s code/tests -v
 python code/evaluation/main.py --run-samples
 ```

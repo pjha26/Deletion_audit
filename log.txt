@@ -172,3 +172,27 @@ branch=main
 repo_root=C:/Users/push1/Documents/Codex/2026-10-25/ghost-data-still-exists-northstar-shop/hackerrank-orchestrate-october26
 worktree=main
 parent_agent=none
+
+
+## [2026-10-25T14:27:21.608817+00:00] Audit desk implemented and browser verified
+
+User Prompt:
+Continuation of the UI and next-step implementation authorization above.
+
+Agent Response Summary:
+Built Ghost Protocol, a local audit dossier UI with searchable actual cases, clickable subject-to-system map, historic identifiers, cutoff timeline, ordered remediation, original source viewer and measured evaluation. No seeded demonstration cases or invented graph flows are displayed. Added loopback Host/Origin safeguards and allowlisted evidence routes. All 26 Python tests pass. Isolated browser QA passed real audit rerun, search/filter, evidence image/PDF previews, CSV download, evaluation and layouts at 1440, 768 and 390 pixels with no JavaScript errors. Visual inspection exposed and fixed a collector-versus-record system attribution bug, removing duplicate system findings from the full corpus. Exact sample match is now 15/32; status accuracy remains 31/32 and limitations remain documented.
+
+Actions:
+* Implemented code/ui.py and code/ui/{index.html,styles.css,app.js,favicon.svg} using Python standard library and buildless browser code.
+* Added test_ui.py, strict-review preservation and record-system attribution regressions, measured test runner and optional isolated browser_check.js.
+* Tested native UI kernels, which failed due missing asset paths; completed browser QA through preinstalled Playwright/Chrome with a fresh workspace profile. Sandbox loopback restrictions required approved local-server/browser/test execution outside the sandbox.
+* Captured actual desktop and mobile screenshots in outputs/. Added UI assets to code.zip packaging, updated setup/run guidance and revised the participant-authorized implementation scope.
+* Generated the latest output.csv from all 518 requests and refreshed readable evaluation and usage reports. Output SHA-256: 0932878aee1570be7f149af992c7579e4dd81d107a2f8fa0e267f5b82d47cc5f.
+
+Context:
+tool=Codex
+model=gpt-6.1-sol
+branch=main
+repo_root=C:/Users/push1/Documents/Codex/2026-10-25/ghost-data-still-exists-northstar-shop/hackerrank-orchestrate-october26
+worktree=main
+parent_agent=none

@@ -26,7 +26,7 @@ def package(destination):
     with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as z:
         z.write(ROOT/'code/README.md', 'README.md')
         for path in sorted((ROOT/'code').rglob('*')):
-            if path.is_file() and path.suffix in {'.py', '.md', '.txt'} and '__pycache__' not in path.parts:
+            if path.is_file() and path.suffix in {'.py', '.md', '.txt', '.html', '.css', '.js', '.svg'} and '__pycache__' not in path.parts:
                 z.write(path, path.relative_to(ROOT).as_posix())
     with zipfile.ZipFile(archive) as z:
         names = z.namelist()
