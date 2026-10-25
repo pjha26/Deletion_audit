@@ -80,7 +80,11 @@ class IntegrationTests(unittest.TestCase):
             field_name='email', old_value='old@fiction.test', new_value='new@fiction.test')])
         self.write_csv('system_activity.csv', [], ['activity_id','event_time','event_type','source_system','target_system','resource_id','reported_result','details'])
         self.write_csv('deletion_rules.csv', [dict(rule_id='delete', data_category='USER_PROFILE', condition='Always', required_action='DELETE'),
-            dict(rule_id='search', data_category='SEARCH_INDEX_ENTRY', condition='Always', required_action='DELETE')])
+            dict(rule_id='search', data_category='SEARCH_INDEX_ENTRY', condition='Always', required_action='DELETE'),
+            dict(rule_id='cache', data_category='CACHE_ENTRY', condition='Always', required_action='DELETE'),
+            dict(rule_id='analytics', data_category='ANALYTICS_PROFILE', condition='Attributable', required_action='ANONYMIZE'),
+            dict(rule_id='support', data_category='SUPPORT_MESSAGE', condition='Shared context retained', required_action='REDACT'),
+            dict(rule_id='backup', data_category='BACKUP_ARCHIVE', condition='Restore can be blocked', required_action='RETAIN')])
         self.request = dict(case_id='synthetic', email='new@fiction.test', requested_at='2026-01-05T00:00:00Z',
             reported_status='COMPLETE', reported_at='2026-01-06T00:00:00Z', audit_at=TIME,
             request_text='Please erase this customer account and its personal information.')
@@ -166,6 +170,75 @@ class IntegrationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'require review'):
             run(self.root,self.root/'deletion_requests.csv',output,self.root/'cache',self.root/'trace.json',strict_review=True)
         self.assertEqual(output.read_text(encoding='utf-8'),'existing export')
+
+    def test_reverse_and_multiple_reference_hops_recover_cleaned_records(self):
+        records = [
+            {'resource_id':'account_440','email':'old@fiction.test','result':'NOT_FOUND'},
+            {'resource_id':'analytics_8120','email':None,'user_id':None,'source_resource_id':'account_440'},
+            {'resource_id':'cache_9231','source_resource_id':'analytics_8120','result':'NOT_FOUND'}]
+        a = self.auditor([(TIME,{'records':records})])
+        prediction, trace = a.audit(self.request)
+        self.assertEqual(prediction['deletion_status'],'COMPLETE')
+        self.assertEqual({o['resource'] for o in trace['resources']},{'account_440','analytics_8120','cache_9231'})
+        self.assertEqual(sum(l['basis']=='explicit_resource_reference' for l in trace['linkage']),2)
+        self.assertEqual(len(json.loads(prediction['steps_json'])),3)
+
+    def test_future_reference_does_not_link_a_record_before_cutoff(self):
+        a = self.auditor([(TIME,{'records':[{'resource_id':'account_440','email':'old@fiction.test','result':'NOT_FOUND'}]}),
+            ('2026-01-11T00:00:00Z',{'records':[{'resource_id':'analytics_8120','email':None,'source_resource_id':'account_440'}]})])
+        prediction, trace = a.audit(self.request)
+        self.assertNotIn('analytics_8120',prediction['steps_json'])
+        self.assertFalse(trace['review']['required'])
+
+    def test_related_record_with_different_owner_requires_review(self):
+        a = self.auditor([(TIME,{'records':[
+            {'resource_id':'account_440','email':'old@fiction.test','result':'NOT_FOUND'},
+            {'resource_id':'analytics_8120','user_id':'user_9999','email':'other@fiction.test','source_resource_id':'account_440'}]})])
+        prediction, trace = a.audit(self.request)
+        self.assertNotIn('analytics_8120',prediction['steps_json'])
+        self.assertTrue(trace['review']['required'])
+        self.assertTrue(any('conflicting subject ownership' in reason for reason in trace['review']['reasons']))
+
+    def test_workflow_time_never_overrides_a_different_explicit_owner(self):
+        self.write_csv('system_activity.csv',[dict(activity_id='worker',event_time=self.request['reported_at'],
+            event_type='DELETE_RECORD',source_system='deletion_worker',target_system='account_service',
+            resource_id='account_999',reported_result='SUCCESS',details='Primary deletion operation submitted.')])
+        a = self.auditor([(TIME,{'records':[
+            {'resource_id':'search_992','email':'old@fiction.test'},
+            {'resource_id':'account_999','user_id':'user_9999','email':'other@fiction.test'}]})])
+        prediction, trace = a.audit(self.request)
+        self.assertNotIn('account_999',prediction['steps_json'])
+        self.assertTrue(any('different explicit owner' in reason for reason in trace['warnings']))
+
+    def test_shared_support_keeps_other_subject_contact_information(self):
+        a = self.auditor([(TIME,{'records':[
+            {'resource_id':'account_440','email':'old@fiction.test','result':'NOT_FOUND'},
+            {'resource_id':'support_991','subject_reference':'user_731','requester_email':None,
+             'message_text':'The other customer is other@fiction.test. Requested subject details are [REDACTED].'}]})])
+        prediction, trace = a.audit(self.request)
+        self.assertEqual(prediction['deletion_status'],'COMPLETE')
+        support = next(r for r in trace['resources'] if r['resource']=='support_991')
+        self.assertEqual(support['state'],'REDACTED')
+        self.assertIn('other@fiction.test',support['payload']['message_text'])
+
+    def test_shared_support_still_finds_historical_subject_email(self):
+        a = self.auditor([(TIME,{'records':[
+            {'resource_id':'support_991','subject_reference':'user_731',
+             'message_text':'Contact old@fiction.test and other@fiction.test for this shared delivery.'}]})])
+        prediction, _ = a.audit(self.request)
+        self.assertEqual(prediction['deletion_status'],'INCOMPLETE')
+        self.assertIn('REDACT_RECORD',prediction['steps_json'])
+        self.assertNotIn('DELETE_RECORD',prediction['steps_json'])
+
+    def test_restore_link_discovers_copy_but_does_not_assume_its_state(self):
+        self.write_csv('system_activity.csv',[dict(activity_id='restore',event_time='2026-01-09T00:00:00Z',
+            event_type='RESTORE_BACKUP',source_system='backup_service',target_system='search_service',
+            resource_id='backup_230',reported_result='SUCCESS',details='Restore job repopulated downstream resource search_983.')])
+        a = self.auditor([(TIME,{'records':[{'resource_id':'backup_230','customer_email':'old@fiction.test','restore_allowed':False}]})])
+        prediction, trace = a.audit(self.request)
+        self.assertEqual(trace['review']['unproven_resources'],['search_983'])
+        self.assertNotIn('REPORT_REMAINING_RECORD',prediction['steps_json'])
+        self.assertTrue(trace['review']['required'])
 
 
 class IntentTests(unittest.TestCase):

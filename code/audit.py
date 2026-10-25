@@ -1,12 +1,12 @@
 """Identity resolution, temporal evidence reconciliation, policy and deterministic planning."""
-from collections import defaultdict
-from dataclasses import asdict
+from collections import defaultdict, deque
+from dataclasses import asdict, replace
 from datetime import datetime
 from pathlib import Path
 import json
 import re
 
-from evidence import Evidence, Observation, RESOURCE, CATEGORIES, prefix, rows, tokens, scalar_items
+from evidence import Evidence, Observation, RESOURCE, CATEGORIES, prefix, rows, tokens, scalar_items, resource_references
 from intent import IntentModel
 
 OPERATIONS = {
@@ -30,6 +30,24 @@ TARGETS = {'DELETE': ('ABSENT', 'DELETE_RECORD', 'VERIFY_RECORD_ABSENT'),
            'RETAIN': ('PRESENT', '', 'VERIFY_RECORD_PRESENT'),
            'DISABLE': ('DISABLED', 'DISABLE_DATA_FLOW', 'VERIFY_DATA_FLOW_DISABLED'),
            'BLOCK': ('BLOCKED', 'BLOCK_RESTORE', 'VERIFY_RESTORE_BLOCKED')}
+
+
+def subject_support_state(payload, identifiers, name):
+    """Shared support context may keep another person's contact details."""
+    fields = {'email', 'phone', 'email_hash', 'name', 'full_name', 'requester_name',
+              'requester_email', 'requester_phone', 'message_text', 'message_excerpt'}
+    direct = [(key, value) for key, value in scalar_items(payload) if key in fields]
+    if not direct:
+        return None
+    subject_pii = {value for value in identifiers if '@' in value or value.startswith('phone:') or re.fullmatch(r'[a-f0-9]{64}', value)}
+    for key, value in direct:
+        if value in (None, '', 'null', '[REDACTED]'):
+            continue
+        if tokens({key: value}) & subject_pii:
+            return 'EXPOSED'
+        if name and re.search(r'(?<!\w)' + re.escape(name.casefold()) + r'(?!\w)', str(value).casefold()):
+            return 'EXPOSED'
+    return 'REDACTED'
 
 
 def step_key(step):
@@ -96,6 +114,51 @@ class Auditor:
                 self.by_token[token].add(no)
             self.by_resource[obs.resource].append(no)
         self.activity_tokens = [(r, tokens(r['details'])) for r in self.activity]
+        self.resource_links = defaultdict(list)
+        for obs in self.evidence.observations:
+            for reference, field in resource_references(obs.payload):
+                self.add_resource_link(obs.resource, reference, obs.time, obs.available_at, obs.evidence,
+                                       f'{obs.location} / {field}')
+        for activity in self.activity:
+            if activity['event_type'] == 'RESTORE_BACKUP':
+                for target in re.findall(r'\bdownstream resource\s+(' + RESOURCE + r')\b', activity['details']):
+                    self.add_resource_link(activity['resource_id'], target, activity['event_time'],
+                        activity['event_time'], activity['activity_id'], 'Explicit restore source-to-destination resource link')
+
+    def add_resource_link(self, source, target, time, available_at, evidence, location):
+        if source == target:
+            return
+        for left, right in ((source, target), (target, source)):
+            self.resource_links[left].append({'target': right, 'time': time, 'available_at': available_at,
+                                               'evidence_id': evidence, 'location': location})
+
+    def resource_owners(self, resource, cutoff):
+        by_time = defaultdict(set)
+        for index in self.by_resource.get(resource, ()):
+            obs = self.evidence.observations[index]
+            if obs.time > cutoff or obs.available_at > cutoff:
+                continue
+            for key, value in scalar_items(obs.payload):
+                if key in {'user_id', 'subject_reference', 'customer_reference'} and isinstance(value, str) and re.fullmatch(r'user_\d+', value):
+                    by_time[obs.time].add(value)
+        return by_time[max(by_time)] if by_time else set()
+
+    def expand_resource_links(self, resources, uid, cutoff, linkage, warnings):
+        queue = deque(sorted(resources))
+        while queue:
+            source = queue.popleft()
+            for edge in self.resource_links.get(source, ()):
+                target = edge['target']
+                if target in resources or edge['time'] > cutoff or edge['available_at'] > cutoff:
+                    continue
+                owners = self.resource_owners(target, cutoff)
+                if owners and uid not in owners:
+                    warnings.append(f'Resource link {source} → {target} has conflicting subject ownership; automatic treatment excluded')
+                    continue
+                resources.add(target)
+                queue.append(target)
+                linkage.append({'resource_id': target, 'source_resource_id': source, 'basis': 'explicit_resource_reference',
+                                'identifiers': [], 'evidence_id': edge['evidence_id'], 'location': edge['location']})
 
     def link_documents(self):
         """Explicit catalog aliases connect business documents without filename-based verdicts."""
@@ -197,15 +260,13 @@ class Auditor:
             matched = sorted(identifiers & observation.identifiers)
             linkage.append({'resource_id': observation.resource, 'basis': 'catalog' if 'catalog_link' in observation.payload else 'exact_identifier',
                             'identifiers': matched, 'evidence_id': observation.evidence, 'location': observation.location})
-        for i in selected:
-            resources |= {v for k, v in scalar_items(self.evidence.observations[i].payload)
-                          if k in {'source_resource_id', 'parent_resource_id'} and isinstance(v, str) and re.fullmatch(RESOURCE, v)}
         # Historical readback/resource linkage remains valid after fields are anonymized.
         for activity, linked_tokens in self.activity_tokens:
             if activity['event_time'] <= cutoff and identifiers & linked_tokens:
                 resources.add(activity['resource_id'])
                 linkage.append({'resource_id': activity['resource_id'], 'basis': 'activity_identity',
                                 'identifiers': sorted(identifiers & linked_tokens), 'evidence_id': activity['activity_id'], 'location': activity['details']})
+        self.expand_resource_links(resources, uid, cutoff, linkage, trace['warnings'])
         if not any(prefix(r) in {'account', 'tombstone'} for r in resources):
             # shortcut: time correlation is weaker than a request ID, replace when explicit workflow correlation IDs are available.
             # Legacy workflow events lack subject fields. A unique nearby primary operation
@@ -216,13 +277,22 @@ class Auditor:
                           and a['event_time'] <= cutoff
                           and abs((datetime.fromisoformat(a['event_time'].replace('Z', '+00:00')) - reported).total_seconds()) <= 600}
             if len(candidates) == 1:
-                resources |= candidates
-                linkage.extend({'resource_id': resource, 'basis': 'workflow_time', 'identifiers': [], 'evidence_id': '',
-                                'location': 'Unique primary operation within ten minutes of workflow report; candidate link only'} for resource in sorted(candidates))
-                trace['warnings'].append('Primary resource linked by unique workflow-time correlation; no explicit subject key in legacy event')
+                candidate = next(iter(candidates))
+                owners = self.resource_owners(candidate, cutoff)
+                if owners and uid not in owners:
+                    trace['warnings'].append(f'Workflow-time candidate {candidate} has a different explicit owner; automatic treatment excluded')
+                else:
+                    resources |= candidates
+                    linkage.extend({'resource_id': resource, 'basis': 'workflow_time', 'identifiers': [], 'evidence_id': '',
+                                    'location': 'Unique primary operation within ten minutes of workflow report; candidate link only'} for resource in sorted(candidates))
+                    trace['warnings'].append('Primary resource linked by unique workflow-time correlation; no explicit subject key in legacy event')
+                    self.expand_resource_links(resources, uid, cutoff, linkage, trace['warnings'])
         for resource in list(resources):
             selected |= {i for i in self.by_resource.get(resource, ()) if eligible(self.evidence.observations[i])}
         observations = [self.evidence.observations[i] for i in selected]
+        observations = [replace(o, state=scoped) if o.category == 'SUPPORT_MESSAGE' and o.state == 'EXPOSED'
+                        and (scoped := subject_support_state(o.payload, identifiers, self.user_by_id[uid]['name'])) else o
+                        for o in observations]
         relevant_files = {o.evidence for o in observations}
         for resource in resources:
             if prefix(resource) != 'account':
@@ -259,6 +329,8 @@ class Auditor:
             if consistent:
                 obs = max(consistent, key=lambda o: (o.rank, o.time, o.evidence))
             latest.append(obs)
+        unproven = sorted(resources - {o.resource for o in observations})
+        trace['warnings'].extend(f'Explicitly linked resource {resource} has no state proof at the audit cutoff' for resource in unproven)
         if not latest:
             raise ValueError(f"No auditable resources for {request['case_id']}")
         status, steps = make_steps(latest, lambda obs: self.policy(obs, cutoff))
@@ -280,6 +352,7 @@ class Auditor:
                      review={'required': bool(trace['warnings']), 'reasons': trace['warnings'],
                              'scope': 'Discovered participant-corpus resources',
                              'primary_linked': any(o.category in {'USER_PROFILE', 'ACCOUNT_TOMBSTONE'} for o in latest),
+                             'unproven_resources': unproven,
                              'excluded_observations': sum(not event['included'] for event in timeline)})
         return {'case_id': request['case_id'], 'deletion_status': status,
                 'steps_json': json.dumps(steps, ensure_ascii=False, separators=(',', ':'))}, trace

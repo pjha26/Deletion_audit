@@ -217,3 +217,64 @@ branch=main
 repo_root=C:/Users/push1/Documents/Codex/2026-10-25/ghost-data-still-exists-northstar-shop/hackerrank-orchestrate-october26
 worktree=main
 parent_agent=none
+
+
+## [2026-10-25T15:28:33.634595+00:00] Clarify website functionality and accuracy limits
+
+User Prompt (verbatim, secrets redacted):
+[@Ponytail](plugin://ponytail@ponytail) is the core functionality of the wesite working properly?
+
+Agent Response Summary:
+Checked measured test and browser results and current evaluation. The UI workflow is functional: real audit rerun, cases, map, original sources, evaluation and CSV export passed browser checks, and 26 Python tests pass. The audit engine remains a prototype with 31/32 public sample statuses and 15/32 exact full answers, plus 264 review-flagged full-corpus cases; it should not be described as a fully reliable deletion certificate. Temporary preview servers were stopped after verification; the user can launch python code/ui.py.
+
+Actions:
+* Read recorded Python/browser test results, evaluation report and source revision. No code changes or production actions.
+
+Context:
+tool=Codex
+model=gpt-6.1-sol
+branch=main
+repo_root=C:/Users/push1/Documents/Codex/2026-10-25/ghost-data-still-exists-northstar-shop/hackerrank-orchestrate-october26
+worktree=main
+parent_agent=none
+
+
+## [2026-10-25T15:46:59.700802+00:00] Multi-hop lineage and subject-scoped verification
+
+User Prompt (verbatim, secrets redacted):
+[@Ponytail](plugin://ponytail@ponytail) what is the next step that we need to proceed with and how to improve the accuracy of teh complete answers explain to me in the simple terms or simple hinenglish and then after that proceed building it
+
+Agent Response Summary:
+Explained in Hinglish that exact answers require every resource, action, citation and ordering step to match. Checked official upstream for participant-data fixes; none were present. Implemented bidirectional multi-hop resource-reference traversal, cutoff-aware restore lineage, conflicting-owner exclusion, subject-scoped shared support redaction and unknown process-state handling. All 34 tests pass and the official 518-row run still validates. Public metrics remain 31/32 statuses and 15/32 exact cases; no accuracy increase is claimed. Generated an unsent organizer clarification draft with concrete public-sample evidence gaps instead of guessing resource IDs.
+
+Actions:
+* Read repository/Ponytail instructions, failure analysis and shared callers; warned about the user-supplied 23:00 IST submission deadline.
+* Updated audit/evidence readers and added eight independent regression scenarios.
+* Reran samples, full corpus, source-backed failure audit and readable reports.
+* Preserved all original participant data and did not import labels into inference.
+
+Context:
+tool=Codex
+model=gpt-6.1-sol
+branch=main
+repo_root=C:/Users/push1/Documents/Codex/2026-10-25/ghost-data-still-exists-northstar-shop/hackerrank-orchestrate-october26
+worktree=main
+parent_agent=none
+
+
+## [2026-10-25T15:51:44.089424+00:00] Accuracy round final ownership guard
+
+Agent Response Summary:
+Added one further regression: close workflow timestamps cannot override a different explicit resource owner. Latest measured suite: 35 tests passed. The final 518-row run remains valid and public sample metrics remain 31/32 statuses and 15/32 exact answers; no scored accuracy increase is claimed for these general reliability fixes. Updated setup/evaluation documents and generated an unsent clarification draft.
+
+Actions:
+* Reran checks.py, public-sample evaluation and full main.py output generation after the ownership guard.
+* Regenerated directly readable evaluation/usage reports and prepared the verified implementation commit.
+
+Context:
+tool=Codex
+model=gpt-6.1-sol
+branch=main
+repo_root=C:/Users/push1/Documents/Codex/2026-10-25/ghost-data-still-exists-northstar-shop/hackerrank-orchestrate-october26
+worktree=main
+parent_agent=none

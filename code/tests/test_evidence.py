@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from evidence import Evidence, observed_state
+from evidence import Evidence, observed_state, resource_references
 
 
 class ReaderTests(unittest.TestCase):
@@ -49,6 +49,18 @@ class ReaderTests(unittest.TestCase):
     def test_tombstone_stable_reference_is_permitted(self):
         self.assertEqual(observed_state('ACCOUNT_TOMBSTONE', {'subject_reference': 'user_7', 'email': None}), 'REDACTED')
         self.assertEqual(observed_state('ACCOUNT_TOMBSTONE', {'subject_reference': 'user_7', 'email_hash': 'x'}), 'EXPOSED')
+
+    def test_missing_process_flags_are_unknown_not_disabled_or_blocked(self):
+        for category in ('DATA_FLOW','BACKUP_ARCHIVE'):
+            self.assertEqual(observed_state(category,{}),'UNKNOWN')
+        self.assertEqual(observed_state('DATA_FLOW',{'enabled':None}),'UNKNOWN')
+        self.assertEqual(observed_state('DATA_FLOW',{'enabled':False}),'DISABLED')
+        self.assertEqual(observed_state('BACKUP_ARCHIVE',{'restore_allowed':False}),'BLOCKED')
+
+    def test_only_typed_resource_references_form_links(self):
+        payload={'message_text':'Unrelated account_100 mentioned in a conversation',
+                 'nested':{'source_resource_ids':['account_200','account_201']}}
+        self.assertEqual(set(resource_references(payload)),{('account_200','source_resource_ids'),('account_201','source_resource_ids')})
 
 
 if __name__ == '__main__':

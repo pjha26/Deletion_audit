@@ -52,10 +52,12 @@ Optional browser QA is in `code/tests/browser_check.js`. Install Playwright outs
 1. CSV and current/historical identity values build exact identifier indexes. Email case is normalized; historical phone formatting is normalized; names alone cannot join people.
 2. JSON, in-memory SQL snapshots, six log encodings, handover tables, PDF text and local screenshot OCR produce timestamped observations with source locations.
 3. Trace IDs connect split lookup/start/completion events. Catalog aliases connect business documents to explicitly identified resources. SQL tables retain replica provenance.
+   Explicit source/parent resource references are traversed in both directions and across multiple hops. Later edges are excluded and a different explicit owner blocks automatic treatment. A restore activity can establish a resource relationship but cannot prove the restored record's current state.
 4. The local classifier predicts deletion intent. Explicit deletion prohibitions override lexical similarity; the score is not calibrated probability.
 5. The audit filters observations by their original timestamp. For exported bundles/logs, an embedded capture/readback/event timestamp is the original observation time; the manifest timestamp is the export/container capture. New observations after the cutoff cannot change the result. PDFs/screenshots use the manifest capture time. This distinction is an interpretation of the historical-state contract and is discussed in the evaluation report.
 6. The newest supported state is reconciled across resources; a surviving independent replica cannot be cleared by a newer primary-only absence. Direct service readbacks are preferred as citations when they support the same state on the same date.
 7. Supplied policy determines deletion, redaction, anonymization or retention. Flows are disabled and restores blocked before record changes. Retention expiry without a supplied fallback is an explicit review error rather than an invented deletion policy.
+   Shared support records are assessed for the requested subject's direct identifiers; another customer's permitted context is preserved. Missing enable/restore flags remain unknown rather than being treated as successful blocking.
 8. A pure planner generates all findings, repairs and checks; serialization is deterministic. No production system is modified.
 
 ## Limitations that matter
@@ -63,6 +65,7 @@ Optional browser QA is in `code/tests/browser_check.js`. Install Playwright outs
 - Read `evaluation/evaluation_report.md`: status accuracy is much stronger than exact full-answer accuracy. These are development-sample metrics, not an estimate of hidden-set accuracy.
 - Some clean/absent records have no recoverable subject linkage in the inspected corpus. Verification covers discovered resources, and cases without a linked primary resource receive a trace warning. A `COMPLETE` prediction is not proof of deletion outside this finite supplied corpus or proof that every lost lineage link was recovered.
 - A unique primary workflow event within ten minutes of the reported time may be used as a candidate identity link when explicit linkage is absent. The operation result is never used as proof of absence. This heuristic is disclosed in traces and is weaker than an explicit request ID.
+  A different explicit owner blocks that candidate even when its timestamp is close. An unknown source/restore flag also blocks a compliance claim rather than defaulting to a safe state.
 - Public sample evaluation includes an unresolved case; it is counted as wrong, not patched using sample labels or numeric ID conventions.
 - Catalog links and displayed contact fields can disagree. Explicit stable-resource links are preserved and conflicts reported; operational deletion would require resolving such conflicts first.
 - Local OCR can misread identifiers. The 11 supplied screenshots were processed locally, with representative screens visually inspected during development; no filename-specific verdict cache is shipped.

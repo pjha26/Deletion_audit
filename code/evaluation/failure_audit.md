@@ -160,4 +160,7 @@ The classifications below distinguish record-state evidence, identity linkage, w
 - Do not add a guessed primary resource when an explicit account tombstone already supplies the stable account reference.
 - Preserve source and identifier basis for every discovered link. Keep review requirements separate from the challenge status.
 - Strict review mode refuses CSV overwrite when unresolved warnings remain. The UI presents those warnings prominently.
+- Follow explicit resource-reference edges bidirectionally and across multiple hops, with cutoff filtering and conflicting-owner guards.
+- In shared support records, assess the requested subject's identifiers while preserving another customer's permitted context.
+- Missing enable/restore flags are unknown, not proof that a flow or restore path is blocked.
 - Do not synthesize numeric resource IDs or use public expected steps as a runtime ownership map.

@@ -83,6 +83,22 @@ def scalar_items(value: Any):
             yield from scalar_items(item)
 
 
+def resource_references(value: Any):
+    """Only explicit resource-reference fields create graph edges; arbitrary mentions do not."""
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if key in {'source_resource_id', 'parent_resource_id', 'source_resource_ids', 'parent_resource_ids'}:
+                references = item if isinstance(item, list) else [item]
+                for reference in references:
+                    if isinstance(reference, str) and re.fullmatch(RESOURCE, reference):
+                        yield reference, key
+            elif isinstance(item, (dict, list)):
+                yield from resource_references(item)
+    elif isinstance(value, list):
+        for item in value:
+            yield from resource_references(item)
+
+
 def classify(resource: str, payload: dict, collection: str = '') -> tuple[str, str]:
     kind = prefix(resource)
     system = payload.get('system') or payload.get('origin_system') or SYSTEMS.get(kind, '')
@@ -101,9 +117,13 @@ def observed_state(category: str, payload: dict) -> str:
     if 'status_code' in payload and int(payload['status_code']) == 404:
         return 'ABSENT'
     if category == 'DATA_FLOW':
-        return 'ACTIVE' if is_true(payload.get('enabled', False)) else 'DISABLED'
+        if str(payload.get('enabled')).lower() not in {'true', 'false', '1', '0', 'yes', 'no', 'enabled', 'disabled', 'active', 'inactive'}:
+            return 'UNKNOWN'
+        return 'ACTIVE' if is_true(payload['enabled']) else 'DISABLED'
     if category == 'BACKUP_ARCHIVE':
-        return 'ACTIVE' if is_true(payload.get('restore_allowed', False)) else 'BLOCKED'
+        if str(payload.get('restore_allowed')).lower() not in {'true', 'false', '1', '0', 'yes', 'no'}:
+            return 'UNKNOWN'
+        return 'ACTIVE' if is_true(payload['restore_allowed']) else 'BLOCKED'
     if category == 'ANALYTICS_PROFILE' or category == 'PRODUCT_TELEMETRY':
         identifying = [(k, v) for k, v in scalar_items(payload)
                        if k in {'user_id', 'customer_reference', 'subject_reference', 'email', 'phone', 'email_hash'}]
@@ -355,9 +375,9 @@ class Evidence:
             elif p.get('result') in {'hit', 'miss'}:
                 state = 'PRESENT' if p['result'] == 'hit' else 'ABSENT'
             elif category == 'DATA_FLOW' and 'enabled' in p:
-                state = 'ACTIVE' if is_true(p['enabled']) else 'DISABLED'
+                state = observed_state(category, p)
             elif category == 'BACKUP_ARCHIVE' and 'restore_allowed' in p:
-                state = 'ACTIVE' if is_true(p['restore_allowed']) else 'BLOCKED'
+                state = observed_state(category, p)
             elif category == 'BACKUP_ARCHIVE' and 'eligible' in p:
                 state = 'ACTIVE' if is_true(p['eligible']) and not is_true(p.get('deletion_block')) else 'BLOCKED'
             elif category == 'BACKUP_ARCHIVE' and p.get('decision') == 'deny':

@@ -36,6 +36,9 @@ def package(destination):
         shutil.copyfile(ROOT/name, destination/name)
     shutil.copyfile(ROOT/'code/IMPLEMENTATION_PLAN.md', destination/'implementation_plan.md')
     shutil.copyfile(ROOT/'code/evaluation/evaluation_report.md', destination/'evaluation_report.md')
+    clarification = ROOT/'code/evaluation/clarification_needed.md'
+    if clarification.exists():
+        shutil.copyfile(clarification,destination/'clarification_needed.md')
     print(f'Packaged {len(names)} source/docs files and {len(output)} prediction rows to {destination}')
     print('code.zip SHA-256', hashlib.sha256(archive.read_bytes()).hexdigest())
 

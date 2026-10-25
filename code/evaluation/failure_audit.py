@@ -25,6 +25,7 @@ def investigate():
         'Evaluator-only investigation of public-sample mismatches. Expected steps are read here solely to locate and diagnose errors; the prediction engine never imports this module or these answers.', '',
         'The classifications below distinguish record-state evidence, identity linkage, workflow claims, and cutoff availability. A resource mention alone does not prove ownership or its final state.', '']
     causes = Counter()
+    missing_artifact_examples, missing_link_examples = [], []
     for diff in metrics['differences']:
         request = requests[diff['case_id']]
         _, identifiers = auditor.identities(request)
@@ -46,6 +47,11 @@ def investigate():
             else:
                 cause = 'Eligible explicit link exists: investigate parser, discovery or reconciliation'
             causes[cause] += 1
+            example = f"`{diff['case_id']}` / `{resource}` / expected `{step['operation']}`; artifact references: {', '.join(files) or 'none'}; explicit subject matches: {len(links)}."
+            if not files:
+                missing_artifact_examples.append(example)
+            elif eligible and not links:
+                missing_link_examples.append(example)
             report += [f"- Missing `{step['operation']}` for `{resource}`: **{cause}**.",
                        f"  - Artifact references: {', '.join(f'`{x}`' for x in files) or 'none'}.",
                        f"  - Parsed pre-cutoff observations: {len(eligible)}; explicit identity matches: {len(links)}.",
@@ -70,9 +76,25 @@ def investigate():
         '- Do not add a guessed primary resource when an explicit account tombstone already supplies the stable account reference.',
         '- Preserve source and identifier basis for every discovered link. Keep review requirements separate from the challenge status.',
         '- Strict review mode refuses CSV overwrite when unresolved warnings remain. The UI presents those warnings prominently.',
+        '- Follow explicit resource-reference edges bidirectionally and across multiple hops, with cutoff filtering and conflicting-owner guards.',
+        '- In shared support records, assess the requested subject\'s identifiers while preserving another customer\'s permitted context.',
+        '- Missing enable/restore flags are unknown, not proof that a flow or restore path is blocked.',
         '- Do not synthesize numeric resource IDs or use public expected steps as a runtime ownership map.', '']
     path = Path(__file__).parent/'failure_audit.md'
     path.write_text('\n'.join(report), encoding='utf-8')
+    clarification = ['# Participant-data clarification draft', '',
+        'This draft is for the participant to review and send through the official event channel if needed. It has not been sent. It concerns public samples only and does not request hidden answers.', '',
+        'We can reproduce the public-sample mismatch below without importing sample answers into prediction code. Could you clarify the intended participant-visible ownership and state evidence?', '',
+        '## 1. Expected resource with no located record-state artifact', '']
+    clarification += ['- '+example for example in missing_artifact_examples[:3]]
+    clarification += ['', 'Which supplied field or record maps these request subjects to those resource IDs? If absence should be inferred from a complete snapshot, how should the deleted resource ID be recovered without relying on numeric user-ID conventions?', '',
+        '## 2. Anonymized/absent resource with no recovered subject link', '']
+    clarification += ['- '+example for example in missing_link_examples[:3]]
+    clarification += ['', 'For these records, the parsed pre-cutoff state exists but direct identifiers are gone and no explicit subject link was recovered. Is there an additional lineage or request-to-resource mapping file, or a documented relationship we should use?', '',
+        '## 3. Policy-supported additional artifacts', '',
+        'Some additional records are linked to a deletion subject by supplied catalog evidence and covered by deletion_rules.csv, while the public expected step list omits them. Should all such supported records be included even when an exact sample comparison penalizes the extra step?', '',
+        'The current implementation retains these diagnostics, avoids guessed resource IDs, and reports its measured exact-match limitations. Please clarify the evidence contract or publish corrected participant-facing examples if appropriate.', '']
+    (Path(__file__).parent/'clarification_needed.md').write_text('\n'.join(clarification),encoding='utf-8')
     print(path, dict(causes))
 
 

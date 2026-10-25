@@ -1,6 +1,6 @@
 # Evaluation report
 
-Generated: 2026-10-25T14:27:21.493636+00:00. Public samples were used iteratively during development; no independent hidden-set accuracy is claimed. Prediction code never loads public sample labels. Metrics include unresolved public cases as failures.
+Generated: 2026-10-25T15:51:43.711922+00:00. Public samples were used iteratively during development; no independent hidden-set accuracy is claimed. Prediction code never loads public sample labels. Metrics include unresolved public cases as failures.
 
 ## Measured public-sample results
 
@@ -35,6 +35,11 @@ The initial evaluation produced 87.50% status accuracy, 21.875% exact-case accur
 - Included exact historic phone normalization and retained stable tombstone references while checking direct identifiers.
 - Fixed a collector-versus-record system bug: explicit record systems override a generic exporting service. This avoids duplicate cross-system findings on the full corpus.
 - Added explicit provenance, an excluded-observation timeline, strict review export refusal, and a local investigation UI.
+- Added bidirectional multi-hop discovery through explicit source/parent resource references, including cutoff-aware restore source-to-destination links. Conflicting subject ownership prevents automatic treatment of another person's record.
+- Scoped shared support redaction to the requested subject's identifiers and stopped interpreting missing process flags as disabled/blocked proof.
+- Prevented a workflow-time candidate from overriding a different explicit resource owner. Timing alone cannot authorize treatment of another person's record.
+
+The latest lineage/safety round adds regression coverage but does not increase the current 15/32 public exact-case result. It is not described as an accuracy gain. The remaining reference differences require additional evidence/ownership clarification or a recovered explicit relationship; no numeric resource-ID assumptions were added. `clarification_needed.md` is an unsent participant-facing draft generated from public-sample diagnostics.
 
 ## Authored evaluation cases
 
@@ -50,8 +55,13 @@ The executable fixtures are in `code/tests/test_audit.py` and `code/tests/test_e
 | Similar-email decoy | Do not include the other person's resource | `test_similar_email_is_not_same_subject` |
 | Replica survives after newer primary absence | Remain incomplete until replica cleanup is proved | `test_new_primary_absence_does_not_prove_replica_clean` |
 | Required retained record is missing | Refuse a complete claim instead of inventing an unsupported repair operation | `test_missing_retained_record_cannot_be_called_complete` |
+| Cleaned records linked through several resource references | Recover all copies without a direct email in every record | `test_reverse_and_multiple_reference_hops_recover_cleaned_records` |
+| Future reference would reveal a new copy | Exclude the later edge from the historical decision | `test_future_reference_does_not_link_a_record_before_cutoff` |
+| Reference points to a different explicit owner | Exclude automatic treatment and flag review | `test_related_record_with_different_owner_requires_review` |
+| Shared ticket still contains another customer's email | Preserve other-customer context when subject PII is already redacted | `test_shared_support_keeps_other_subject_contact_information` |
+| Restore activity names a copy but no readback exists | Expose missing proof; do not invent a present record | `test_restore_link_discovers_copy_but_does_not_assume_its_state` |
 
-Additional checks cover input-order invariance, case-ID renaming, reported-status independence, future evidence validation, multilingual intent, multiline identifiers, split traces, all-identifier anonymization, record-versus-collector attribution, strict review preservation, local host/origin validation and evidence path allowlists. Latest measured test run: 26 tests, 0 failures, 0 errors; measured 2026-10-25T14:20:11.537217+00:00. Reproduce with `python code/evaluation/checks.py`.
+Additional checks cover input-order invariance, case-ID renaming, reported-status independence, future evidence validation, multilingual intent, multiline identifiers, split traces, all-identifier anonymization, record-versus-collector attribution, strict review preservation, local host/origin validation and evidence path allowlists. Latest measured test run: 35 tests, 0 failures, 0 errors; measured 2026-10-25T15:49:37.244398+00:00. Reproduce with `python code/evaluation/checks.py`.
 
 ## Full participant run
 
