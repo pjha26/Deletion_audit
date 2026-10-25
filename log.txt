@@ -61,3 +61,51 @@ branch=main
 repo_root=C:/Users/push1/Documents/Codex/2026-10-25/ghost-data-still-exists-northstar-shop/hackerrank-orchestrate-october26
 worktree=main
 parent_agent=none
+
+
+## [2026-10-25T13:44:19.813987+00:00] Implementation, evaluation and packaging checkpoint
+
+User Prompt:
+Continuation of the participant's implementation authorization recorded above. No additional human request was received during this build.
+
+Agent Response Summary:
+Built the complete local CLI pipeline, processed all 94 evidence files including 11 screenshots and 4 PDFs, and generated validated predictions for all 518 participant requests. Added a locally trained multilingual Naive Bayes intent classifier and local ONNX OCR with zero paid inference calls; the runtime does not use an LLM. Public sample results are 31/32 status accuracy, 14/32 exact full-case accuracy, 97.16% step precision and 88.60% step recall. Seventeen authored regression/integration tests pass. Known lost-lineage and exact-verification gaps are explicitly documented; no sample answers or numeric ID conventions were inserted into inference.
+
+Actions:
+* Compared supplied request attachment to repository CSV: all 518 parsed rows match.
+* Installed local OCR dependencies under ignored work/deps, using bundled Python 3.12 and pypdf 6.10.0.
+* Implemented all evidence readers, six log encodings, trace identity joins, historical identity resolution, cutoff filtering, policy application, replica preservation, ordered remediation, strict CSV validation, and review traces.
+* Committed and pushed plan, evidence readers, audit engine, and tested general fixes to pjha26/Deletion_audit main. No force push was used.
+* Ran 17 tests; fixed multiline identifier corruption, stale trace cache results, weak multilingual coverage, unrelated snapshot scope and replica verification failures.
+* Ran all requests with a fresh OCR cache: 11 image pipeline calls, 518 intent predictions, 89.724 seconds. Output SHA-256: 0f5d62075a2afce5b7f2fa5caa930fc9993d9832ca19240d0509e5bd4c0f9cfc.
+* Generated directly readable evaluation/usage Markdown reports and reproducible packaging code. Preparing archive extraction/reproduction check and final push.
+
+Context:
+tool=Codex
+model=gpt-6.1-sol
+branch=main
+repo_root=C:/Users/push1/Documents/Codex/2026-10-25/ghost-data-still-exists-northstar-shop/hackerrank-orchestrate-october26
+worktree=main
+parent_agent=none
+
+Metadata correction:
+The earlier manually entered 00:40 implementation-entry timestamp does not represent the actual build time. This checkpoint uses the live UTC clock; the implementation took place later on October 25. The current task's authoritative session turn_context identifies gpt-6.1-sol. Earlier unavailable-model records are superseded by this verified metadata while preserved append-only. The initial planning discussion predates repository logging and is summarized in the earlier entry, not presented as an exhaustive verbatim transcript. This transcript is an honest development summary in the repository-prescribed format, not a manufactured full tool trace.
+
+
+## [2026-10-25T13:46:14.630773+00:00] Package verification completed
+
+Agent Response Summary:
+The extracted code ZIP passed all 17 tests and reproduced all 518 predictions byte-for-byte. The generated archive contains 16 source/documentation files and excludes dataset, dependencies, caches, nested archives and detected credential patterns. Final evaluation and usage reports are included directly as Markdown.
+
+Actions:
+* Extracted outputs/code.zip into work/package_check and ran that extracted CLI, not the source working tree.
+* Confirmed output SHA-256 0f5d62075a2afce5b7f2fa5caa930fc9993d9832ca19240d0509e5bd4c0f9cfc.
+* Preparing final documentation/report commit and authorized push to origin/main.
+
+Context:
+tool=Codex
+model=gpt-6.1-sol
+branch=main
+repo_root=C:/Users/push1/Documents/Codex/2026-10-25/ghost-data-still-exists-northstar-shop/hackerrank-orchestrate-october26
+worktree=main
+parent_agent=none

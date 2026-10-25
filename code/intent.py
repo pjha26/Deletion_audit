@@ -91,6 +91,7 @@ def features(text):
 
 
 class IntentModel:
+    # shortcut: authored examples do not cover every language or negation, expand with independently labeled requests before production use.
     name = 'authored-multilingual-char-ngram-naive-bayes-v1'
 
     def __init__(self):

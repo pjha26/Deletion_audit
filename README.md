@@ -1,5 +1,18 @@
 # HackerRank Orchestrate - October 2026
 
+## Implemented solution
+
+This repository now contains the local deletion audit implementation. Start with [setup and execution instructions](code/README.md), the [implementation plan](code/IMPLEMENTATION_PLAN.md), and [measured evaluation](code/evaluation/evaluation_report.md). The generated root `output.csv` covers all 518 requests. Public-sample exact-answer accuracy has known gaps, documented in the report; this is not a claim of a perfect hidden-test submission.
+
+```text
+python -m pip install -r code/requirements.txt
+python code/main.py
+python -m unittest discover -s code/tests -v
+python code/evaluation/main.py --run-samples
+```
+
+The original challenge instructions follow.
+
 ## Ghost Data Still Exists
 
 Build an AI agent that audits whether a user's personal data was actually deleted.

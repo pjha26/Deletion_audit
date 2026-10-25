@@ -17,6 +17,7 @@ def key(step):
 
 def evaluate(predictions, truth):
     status = exact = sequence = matched = predicted = expected = fields = 0
+    strict_steps = 0
     differences = []
     confusion = Counter()
     for case_id, target in truth.items():
@@ -30,6 +31,9 @@ def evaluate(predictions, truth):
         matched += sum((tc & pc).values())
         expected += len(ts)
         predicted += len(ps)
+        exact_steps = Counter(json.dumps(s, sort_keys=True) for s in ts)
+        predicted_steps = Counter(json.dumps(s, sort_keys=True) for s in ps)
+        strict_steps += sum((exact_steps & predicted_steps).values())
         by_key = {key(s): s for s in ps}
         for step in ts:
             other = by_key.get(key(step), {})
@@ -44,6 +48,7 @@ def evaluate(predictions, truth):
     return {'cases': n, 'status_accuracy': status/n, 'exact_case_accuracy': exact/n,
             'sequence_accuracy': sequence/n, 'step_precision': matched/max(predicted, 1),
             'step_recall': matched/max(expected, 1), 'field_accuracy': fields/max(7*expected, 1),
+            'step_accuracy': strict_steps/max(expected, 1),
             'expected_steps': expected, 'predicted_steps': predicted,
             'confusion': {f'{a} -> {b}': c for (a, b), c in confusion.items()}, 'differences': differences}
 

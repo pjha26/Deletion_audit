@@ -132,6 +132,7 @@ class Observation:
     payload: dict = field(default_factory=dict)
     store: str = ''
     rank: int = 2
+    container_captured_at: str = ''
 
     @property
     def identifiers(self) -> set[str]:
@@ -148,6 +149,7 @@ class Evidence:
         self.ocr_calls = 0
         self.cache_hits = 0
         self.ocr = None
+        self.ocr_quality = {}
 
     def add(self, resource, payload, entry, location, *, time='', system='', category='', state='', store='', rank=2):
         sys, cat = classify(resource, payload, store)
@@ -156,7 +158,7 @@ class Evidence:
         cat = category or cat
         self.observations.append(Observation(resource, system or sys, cat,
             state or observed_state(cat, payload), time or entry['captured_at'],
-            time or entry['captured_at'], entry['file_id'], location, payload, store, rank))
+            time or entry['captured_at'], entry['file_id'], location, payload, store, rank, entry['captured_at']))
 
     def load(self):
         root = self.dataset.resolve()
@@ -186,7 +188,8 @@ class Evidence:
             else:
                 raise ValueError(f'Unsupported evidence: {path}')
             self.coverage.append({'file_id': entry['file_id'], 'path': entry['file_path'],
-                                  'observations': len(self.observations) - before, 'read': True})
+                                  'observations': len(self.observations) - before, 'read': True,
+                                  **self.ocr_quality.get(str(path), {})})
         return self
 
     def read_image(self, path):
@@ -205,6 +208,10 @@ class Evidence:
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_text(json.dumps(result, ensure_ascii=False), encoding='utf-8')
             self.ocr_calls += 1
+        confidences = [float(row[2]) for row in result]
+        self.ocr_quality[str(path)] = {'ocr_lines': len(result),
+            'minimum_ocr_confidence': round(min(confidences), 4),
+            'low_confidence_lines': sum(c < 0.85 for c in confidences)}
         # Preserve reading order, joining boxes on a common baseline for console tables.
         bands = []
         for box, text, confidence in sorted(result, key=lambda r: (sum(p[1] for p in r[0])/4, r[0][0][0])):

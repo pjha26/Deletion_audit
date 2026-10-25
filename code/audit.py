@@ -135,6 +135,7 @@ class Auditor:
                     payload['identity_conflict'] = 'Explicit catalog resource link differs from displayed contact fields'
                 self.evidence.add(resource, payload, document, 'catalog alias / document',
                     time=document['captured_at'], system=system, category=category, state=state, rank=3)
+                self.evidence.observations[-1].available_at = max(document['captured_at'], activity['event_time'])
 
     def identities(self, request):
         email = request['email'].strip().casefold()
@@ -195,6 +196,7 @@ class Auditor:
             if activity['event_time'] <= cutoff and identifiers & linked_tokens:
                 resources.add(activity['resource_id'])
         if not any(prefix(r) == 'account' for r in resources):
+            # shortcut: time correlation is weaker than a request ID, replace when explicit workflow correlation IDs are available.
             # Legacy workflow events lack subject fields. A unique nearby primary operation
             # supplies a candidate resource; readback evidence must still establish its state.
             reported = datetime.fromisoformat(request['reported_at'].replace('Z', '+00:00'))
