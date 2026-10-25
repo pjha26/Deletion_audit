@@ -1,95 +1,246 @@
-# Northstar deletion audit
+# Ghost Protocol — Northstar Deletion Audit
 
-A local command-line audit pipeline that reads the participant corpus, reconstructs identities and record states, applies the supplied policy, and writes the challenge CSV. No paid model endpoint or API key is required. The learned components are an authored multilingual character-ngram Naive Bayes intent classifier and RapidOCR's pretrained ONNX OCR models. This is **not an LLM-based solution**.
+An offline investigation tool for the **Ghost Data Still Exists** challenge. It checks whether a deletion request was actually completed across the supplied systems, explains what remains, and produces an ordered remediation and verification plan.
+
+A dashboard saying “Complete” is only a claim. This project checks the underlying records, replicas, identifiers and processes before deciding what the evidence supports.
+
+The submitted runtime uses a small local intent classifier, neural OCR and explicit policy logic. It requires **no paid API, API key, hosted LLM, Node installation or frontend build**. Codex helped develop the project; it is not invoked by the submitted application.
+
+## What the project delivers
+
+- One prediction for each of the **518 official requests**, sorted by `case_id`.
+- The exact CSV schema: `case_id,deletion_status,steps_json`.
+- Current and historical identity resolution using emails, phones, hashes and stable subject references.
+- Readers for CSV context and all **94 supplied evidence files**: JSON, SQL snapshots, logs, text, PDFs and PNG screenshots.
+- Detection of remaining personal data, surviving replicas, active synchronization and unsafe restore paths.
+- Policy-aware deletion, redaction and anonymization plans that preserve required retained records and permitted tombstone references.
+- A local investigation desk with source inspection and review warnings.
+- An evaluation workflow, readable results, inference-usage accounting and validated submission packaging.
+
+This is an audit and planning tool. It does not connect to production systems or execute the proposed deletion actions.
+
+## Architecture
+
+```mermaid
+flowchart TD
+    R[Deletion request CSV] --> I[Local multilingual intent classifier]
+    I -->|No deletion authorized| N[NOT_APPLICABLE: empty steps]
+    I -->|Deletion authorized| A[Subject audit]
+
+    C[Current identities and identity history] --> K[Exact identifier and resource indexes]
+    M[Evidence manifest and local media] --> E[Evidence readers: JSON, SQL, logs, PDF, OCR]
+    E --> O[Timestamped observations with source locations]
+    O --> K
+    S[System activity and explicit resource references] --> K
+    K --> A
+
+    A --> T[Cutoff filtering and replica reconciliation]
+    P[deletion_rules.csv] --> D[Policy checks and retained-record protection]
+    T --> D
+    D --> Q[Ordered findings, remediation and verification]
+    Q --> V[Schema, ordering and citation validation]
+    N --> V
+    V --> CSV[output.csv]
+    A --> TRACE[Audit traces and review warnings]
+    CSV --> UI[Local investigation desk]
+    TRACE --> UI
+    O --> UI
+
+    L[Public sample answers: evaluation only] --> EV[Separate evaluator]
+    Q --> EV
+    EV --> REP[Evaluation and usage reports]
+    CSV --> PKG[Verified submission package]
+    REP --> PKG
+```
+
+The main path is: **request → identity links → observed state at the cutoff → policy → ordered answer**. Sample labels feed only the separate evaluator. They are never used to resolve a person, select a resource or generate a prediction.
 
 ## Setup
 
-Use Python 3.12 (tested). From the repository root, with `dataset/` alongside `code/`:
+Python **3.12** was used for testing. Run these commands from the repository root:
 
 ```powershell
+git clone https://github.com/pjha26/Deletion_audit.git
+cd Deletion_audit
 python -m venv .venv
 .venv\Scripts\python -m pip install -r code/requirements.txt
 .venv\Scripts\python code/main.py
 .venv\Scripts\python code/ui.py
 ```
 
-On macOS/Linux replace `.venv\Scripts\python` with `.venv/bin/python`. Install dependencies once with internet access; inference then runs locally. ONNX OCR model files are included by the installed RapidOCR package. Keep virtual environments outside `code/`.
+Open **http://127.0.0.1:8765**. To use another port:
 
-The archive deliberately excludes `dataset/`. Obtain the official participant dataset and place it at the root before running. Arbitrary working directories are supported by default paths derived from the script location.
+```powershell
+.venv\Scripts\python code/ui.py --port 8766
+```
 
-## Ghost Protocol investigation desk
+On macOS/Linux, replace `.venv\Scripts\python` with `.venv/bin/python`. Once the environment is activated, the shorter `python` commands below work on either platform.
 
-Open `http://127.0.0.1:8765` after `python code/ui.py`. This local Python server serves the included HTML/CSS/JavaScript; Node, npm and a frontend build are not required. Use `--port 8766` if the default port is occupied.
+Dependencies are `pypdf` and `rapidocr-onnxruntime`, with their installed dependencies. The first installation needs internet access. OCR model files are supplied through the installed RapidOCR package; inference runs locally afterward. A compatible ONNX Runtime wheel is required for the target platform.
 
-The interface is an evidence dossier: a searchable case queue, subject-to-record map, current/historical identity trail, observed-state timeline with an excluded-observations toggle, ordered remediation ledger, source viewer for original PDFs/images/logs/SQL, and measured evaluation ledger. Every displayed case, number and source comes from the current participant files and generated artifacts. Mobile uses readable selectable system rows rather than shrinking a desktop graph.
+### Running from the submitted ZIP
 
-The Run audit button executes the same local CLI and evaluation commands and refreshes the output. Export downloads the actual CSV. The UI never executes production deletion actions. Review warnings remain separate from the required challenge status; a green corpus prediction is not an operational deletion certificate. The local service accepts no arbitrary commands, filenames or uploaded datasets.
+Extract `code.zip` so that `code/` is directly inside the project folder. Place the official participant `dataset/` beside it. The archive intentionally excludes the corpus and installed dependencies.
 
-## Run and evaluate
+For audit generation and the UI, use the same setup commands after creating the virtual environment. To rerun the **packaging** workflow, also place the separately submitted `log.txt` at the project root; packaging requires the transcript. Public sample evaluation requires the official sample CSVs in `dataset/`.
 
-For final submission, run `python code/finalize.py`. It stops on any failed check, runs the authored tests and public evaluation, regenerates all 518 predictions, refreshes measured reports, validates source citations, and builds the three files in `../outputs/`. `submission_manifest.md` contains their SHA-256 checksums. The detailed command output is saved in `work/finalize.log`.
+## Input files
 
-Exports are written atomically, preserving the previous file if a write fails. Request schema, unique IDs and UTC cutoffs are validated before processing. Input, engine, CSV and trace fingerprints detect stale or altered results. The desk blocks export until a fresh audit when those fingerprints differ. A COMPLETE corpus verdict with unresolved evidence limitations displays a REVIEW stamp; the required challenge CSV retains its three official statuses. Failed HTTP lookups are unknown state, never proof of absence.
+| Input | Purpose |
+|---|---|
+| `dataset/deletion_requests.csv` | Requests to audit and their historical cutoffs |
+| `dataset/user_identities.csv` | Current identity values |
+| `dataset/user_audit_log.csv` | Historical identity changes |
+| `dataset/system_activity.csv` | Service activities and process relationships |
+| `dataset/deletion_rules.csv` | Required treatment for each data category |
+| `dataset/evidence_files.csv` | Evidence IDs, paths, origins and capture times |
+| `dataset/evidence/` | Original logs, snapshots, business documents and screenshots |
+| `dataset/sample_deletion_requests.csv`, `dataset/sample_output.csv` | Public evaluation only |
+
+Paths default to the project root regardless of the shell's current directory. Use explicit flags to audit another compatible participant dataset:
 
 ```text
-python code/main.py --dataset dataset --output output.csv
-python -m unittest discover -s code/tests -v
+python code/main.py --dataset dataset --requests dataset/deletion_requests.csv --output output.csv
+```
+
+## How an audit is decided
+
+**Authorization comes first.** A locally trained character-ngram Naive Bayes model distinguishes deletion from access, correction, export and other requests. Explicit prohibitions help prevent “do not delete” from being treated as authorization. The training examples are visible in `code/intent.py`; model scores are not calibrated probabilities.
+
+**Identity is reconstructed across time.** Exact identifiers and historical changes connect records to the requested person. Names alone do not merge people. Explicit source/parent resource references can be followed in both directions and over multiple hops. Conflicting ownership is exposed for review.
+
+**Evidence establishes state.** Readers preserve resource IDs, systems, timestamps, source IDs and locations. Trace IDs join split log events. SQL exports are inspected in an isolated in-memory SQLite connection with restricted execution. PDF text extraction and local OCR make the media searchable. An unsuccessful HTTP read is unknown state, not evidence that a record is absent.
+
+**The cutoff matters.** Later observations cannot establish an earlier state. For exported log/JSON bundles, the implementation treats an explicit embedded event/readback timestamp as the original observation time and the manifest timestamp as the export/container time. PDFs and screenshots use their manifest capture time. This interpretation, and the alternative stricter availability interpretation, are documented in the evaluation report.
+
+**Copies and retention are checked separately.** Primary absence does not clear a surviving independent replica. A retained security or legal record must remain available. Shared support records are evaluated for the requested subject's identifiers, preserving permitted information about other people. Tombstones preserve permitted stable references while prohibited direct identifiers are removed.
+
+**The planner orders the work.** Active flows are disabled and unsafe restores blocked before record changes. Findings cite current evidence. Proposed actions and future checks do not pretend to have completed evidence. The final sequence follows the challenge's phase, operation, system and resource ordering.
+
+## Output contract
+
+`output.csv` contains exactly these columns:
+
+```csv
+case_id,deletion_status,steps_json
+```
+
+| Status | Meaning in this implementation |
+|---|---|
+| `NOT_APPLICABLE` | The request does not authorize deletion; `steps_json` is `[]` |
+| `INCOMPLETE` | Supported violations or recreation risks remain; steps contain findings, remediation and final checks |
+| `COMPLETE` | Discovered relevant resources satisfy the supplied policy; steps contain evidence-backed verification |
+
+Every step has exactly `step_no`, `phase`, `system_id`, `resource_id`, `operation`, `state` and `evidence_id`. Numbering starts at 1. Findings precede remediation, followed by verification. Findings and COMPLETE verification cite participant-visible sources; future work uses an empty evidence ID.
+
+Before export, validation checks case coverage, ordering, statuses, fields, operation/state pairs, duplicate steps and citation membership in the selected case's resource trace. Empty COMPLETE proof is rejected. Unknown states and missing required retained records cause an explicit error rather than an invented compliant result.
+
+`COMPLETE` is bounded by discovered evidence. It is not a certificate covering records whose lineage was lost or systems outside the supplied corpus. Review warnings remain visible even when the required challenge CSV uses that status.
+
+## Investigation desk
+
+The UI runs on a standard-library Python HTTP server bound to loopback. Its HTML, CSS, JavaScript and icons are local assets.
+
+- Searchable case queue with verdict and review filters.
+- Subject-to-resource trace map and current/historical identity trail.
+- Timeline showing included observations and those excluded by the cutoff.
+- Ordered remediation ledger with clickable citations.
+- Original log, SQL and text views, plus image and PDF previews.
+- Measured evaluation, local model usage and failure analysis.
+- A real **Run audit** action and CSV export.
+
+The visual design follows an investigation dossier rather than a generic analytics dashboard. On small screens, resource navigation stays readable instead of shrinking the desktop graph.
+
+A COMPLETE prediction with unresolved evidence limitations displays a **REVIEW** stamp and its underlying CSV verdict. Input, engine, CSV and trace fingerprints detect stale results; export is blocked until a fresh audit when those fingerprints differ. The local service accepts only fixed actions and allowlisted evidence IDs, with Host/Origin checks on requests.
+
+## Tests, evaluation and packaging
+
+For a complete submission refresh:
+
+```text
+python code/finalize.py
+```
+
+This runs the authored tests, public evaluation, all official requests, failure analysis, report generation and packaging. It stops if a command fails. Detailed command output goes to `work/finalize.log`. By default the submission files are written to `../outputs/`; use `--destination` to choose another folder.
+
+Individual commands:
+
+```text
 python code/evaluation/checks.py
 python code/evaluation/main.py --run-samples
+python code/main.py
 python code/evaluation/failure_audit.py
 python code/evaluation/report.py
 python code/package_submission.py --destination ../outputs
 ```
 
-The main command validates one row per input case, lexical `case_id` order, exact step fields, operation/state combinations, evidence IDs, phase/operation/system/resource ordering, consecutive numbering, and empty evidence on future work. It fails rather than inventing a subject identity or resource when none can be established. The official 518-row run completes without an unresolved-case exception.
+The full audit must follow sample evaluation before generating final usage reports. `finalize.py` enforces that sequence. Reports and packages must match the recorded full-run fingerprints. CSV and JSON exports use atomic file replacement; source or engine changes during processing preserve the previous CSV rather than publishing a mixed run.
 
-`work/audit_traces.json` contains per-case intent scores, resolved identifiers, selected observations and warnings. `work/cache/coverage.json` records all manifest files. `work/cache/last_usage.json` records the last run. These scratch files contain fictional corpus data and are excluded from the submission archive.
+Optional browser QA is in `code/tests/browser_check.js`. It requires a separately installed Playwright and browser, plus a running local UI. Configure `PLAYWRIGHT_MODULE`, `BROWSER_EXECUTABLE` and `AUDIT_URL` when needed. These are development tools, not application dependencies.
 
-The evaluator catches unresolved sample cases, counts them as failures, and writes detailed differences to `work/evaluation_details.json`. Run the main full-dataset command last before generating usage reports; reports reject usage metadata that does not match the official request count. Public sample answers are read only by the evaluator, never by prediction code.
+### Measured results
 
-Run `python code/main.py --strict-review` to refuse CSV overwrite while any case has unresolved review warnings. This operational guard deliberately blocks the current corpus's uncertain cases; default challenge export still writes all required rows and preserves the exact three-status schema.
+The checked-in report records **43 passing authored tests**, all 94 evidence files read, and 518 output rows. Browser checks covered real inference, source viewers, CSV export and desktop/tablet/mobile layouts with no recorded JavaScript errors. A separately extracted ZIP reproduced the exact CSV; a cold OCR run processed all 11 images and produced the same predictions.
 
-Optional browser QA is in `code/tests/browser_check.js`. Install Playwright outside `code/`, start the local UI, then run it with Node. `PLAYWRIGHT_MODULE`, `BROWSER_EXECUTABLE` and `AUDIT_URL` can point to an existing local Playwright installation, a fresh-profile browser executable, and the local server. Browser QA is a development dependency only; the application itself uses no JavaScript packages or remote fonts.
+| Public development-sample metric | Result |
+|---|---:|
+| Cases evaluated | 32 |
+| Deletion-status accuracy | 31/32 — 96.88% |
+| Exact full-case agreement | 15/32 — 46.88% |
+| Step precision, phase/operation/system/resource | 97.16% |
+| Step recall using the same key | 88.60% |
+| Strict step accuracy, all seven fields | 65.80% |
+| Field accuracy | 85.34% |
 
-## How it works
+These samples were used during development. They are not an independent estimate of hidden-set accuracy. One public sample remains unresolved and is counted as wrong. The detailed differences and source-backed diagnosis are in `code/evaluation/evaluation_report.md` and `code/evaluation/failure_audit.md`.
 
-1. CSV and current/historical identity values build exact identifier indexes. Email case is normalized; historical phone formatting is normalized; names alone cannot join people.
-2. JSON, in-memory SQL snapshots, six log encodings, handover tables, PDF text and local screenshot OCR produce timestamped observations with source locations.
-3. Trace IDs connect split lookup/start/completion events. Catalog aliases connect business documents to explicitly identified resources. SQL tables retain replica provenance.
-   Explicit source/parent resource references are traversed in both directions and across multiple hops. Later edges are excluded and a different explicit owner blocks automatic treatment. A restore activity can establish a resource relationship but cannot prove the restored record's current state.
-4. The local classifier predicts deletion intent. Explicit deletion prohibitions override lexical similarity; the score is not calibrated probability.
-5. The audit filters observations by their original timestamp. For exported bundles/logs, an embedded capture/readback/event timestamp is the original observation time; the manifest timestamp is the export/container capture. New observations after the cutoff cannot change the result. PDFs/screenshots use the manifest capture time. This distinction is an interpretation of the historical-state contract and is discussed in the evaluation report.
-6. The newest supported state is reconciled across resources; a surviving independent replica cannot be cleared by a newer primary-only absence. Direct service readbacks are preferred as citations when they support the same state on the same date.
-7. Supplied policy determines deletion, redaction, anonymization or retention. Flows are disabled and restores blocked before record changes. Retention expiry without a supplied fallback is an explicit review error rather than an invented deletion policy.
-   Shared support records are assessed for the requested subject's direct identifiers; another customer's permitted context is preserved. Missing enable/restore flags remain unknown rather than being treated as successful blocking.
-8. A pure planner generates all findings, repairs and checks; serialization is deterministic. No production system is modified.
+Inference uses **zero LLM calls and USD 0 paid API cost**. Local classifier/OCR calls, cache hits and measured elapsed time are reported separately in `code/evaluation/usage_report.md`. This does not claim that hardware, electricity or installation bandwidth have no cost.
 
-## Limitations that matter
+## Files and responsibilities
 
-- Read `evaluation/evaluation_report.md`: status accuracy is much stronger than exact full-answer accuracy. These are development-sample metrics, not an estimate of hidden-set accuracy.
-- Some clean/absent records have no recoverable subject linkage in the inspected corpus. Verification covers discovered resources, and cases without a linked primary resource receive a trace warning. A `COMPLETE` prediction is not proof of deletion outside this finite supplied corpus or proof that every lost lineage link was recovered.
-- A unique primary workflow event within ten minutes of the reported time may be used as a candidate identity link when explicit linkage is absent. The operation result is never used as proof of absence. This heuristic is disclosed in traces and is weaker than an explicit request ID.
-  A different explicit owner blocks that candidate even when its timestamp is close. An unknown source/restore flag also blocks a compliance claim rather than defaulting to a safe state.
-- Public sample evaluation includes an unresolved case; it is counted as wrong, not patched using sample labels or numeric ID conventions.
-- Catalog links and displayed contact fields can disagree. Explicit stable-resource links are preserved and conflicts reported; operational deletion would require resolving such conflicts first.
-- Local OCR can misread identifiers. The 11 supplied screenshots were processed locally, with representative screens visually inspected during development; no filename-specific verdict cache is shipped.
-- The small authored intent model is suitable for this prototype, not a multilingual production authorization system. Unknown language coverage and subtle negation require review.
-- Missing policy-required retained data cannot be repaired with any allowed restore-record operation in the challenge vocabulary, so it causes a review error.
+```text
+Deletion_audit/
+├── README.md                    Project guide and architecture
+├── decisions.md                 Design choices and trade-offs
+├── code/
+│   ├── main.py                  Audit CLI, validation and exports
+│   ├── evidence.py              Evidence extraction and provenance
+│   ├── intent.py                Local intent model and authored examples
+│   ├── audit.py                 Identity, reconciliation, policy and planning
+│   ├── ui.py                    Local server and fixed UI actions
+│   ├── ui/                      HTML, CSS, JavaScript and icon
+│   ├── tests/                   Authored regression and browser checks
+│   ├── evaluation/              Evaluator, analysis and measured reports
+│   ├── finalize.py              End-to-end verification and packaging
+│   ├── package_submission.py    Validated code archive and submission copies
+│   ├── README.md                Archive-ready copy of this guide
+│   ├── decisions.md             Archive-ready decision record
+│   ├── INTERVIEW_GUIDE.md        Questions grounded in the implementation
+│   └── requirements.txt         Runtime dependencies
+├── dataset/                     Official participant corpus; excluded from ZIP
+├── output.csv                   Generated submission predictions
+├── log.txt                      Append-only development transcript
+└── work/                        Local caches, traces and checks; excluded from ZIP
+```
 
-## Source map
+After a run, `work/audit_traces.json` contains case-level identity links, observations and review reasons. `work/cache/coverage.json` records evidence coverage; `work/cache/last_usage.json` records inference counts and fingerprints. They contain fictional corpus data and are not shipped in the code archive.
 
-| File | Responsibility |
-|---|---|
-| `main.py` | CLI, execution, CSV, trace and usage output |
-| `evidence.py` | Evidence readers, OCR and provenance |
-| `intent.py` | Authored training examples and local intent model |
-| `audit.py` | Identity, time reconciliation, policy, planner and validation |
-| `tests/` | Authored synthetic cases and regression tests |
-| `evaluation/main.py` | Public-sample comparison |
-| `evaluation/report.py` | Reproducible Markdown evaluation and usage reports |
-| `evaluation/failure_audit.py` | Source-backed public error diagnosis, isolated from prediction code |
-| `evaluation/checks.py` | Measured Python test results |
-| `ui.py`, `ui/` | Local server and investigation UI |
-| `IMPLEMENTATION_PLAN.md` | Build plan and design constraints |
+## Known limits and next improvements
 
-Prompts are not used because there are no LLM calls. All learned intent training text is visible in `intent.py`. The finite-state evidence and policy interpretation is visible in source rather than hidden in generated raw data.
+Exact answers remain weaker than status classification. Already-deleted or anonymized records can lose the identifier needed to connect them back to a person. The implementation does not copy resource IDs from expected answers or infer ownership from numeric naming patterns to fill that gap.
+
+A unique primary workflow event within ten minutes of the reported time can be treated as a weak candidate when explicit linkage is unavailable. Its reported success never proves deletion, a different explicit owner blocks the link, and the uncertainty is disclosed in the trace.
+
+OCR can misread identifiers. The small multilingual classifier needs broader independent language and negation tests before operational use. Conflicting catalog/display identities, expired retention conditions without a fallback policy, and missing retained records require review. The challenge vocabulary has no restore-record action for repairing missing required retained data.
+
+Use `python code/main.py --strict-review` to refuse export when review warnings remain. This intentionally blocks the current corpus's uncertain cases; default challenge mode still writes all required rows using the official three-status schema.
+
+The most useful next improvements are durable subject-to-resource lineage, independently labeled intent tests, identifier-level OCR evaluation and clarification of the export-time interpretation. They need evidence and validation rather than last-minute label-specific patches. `decisions.md` explains these choices in more detail.
+
+## Submission
+
+Upload **code.zip**, **output.csv** and **log.txt** to the challenge:
+
+https://www.hackerrank.com/contests/hackerrank-orchestrate-october26/challenges/ghost-data-still-exists
+
+The ZIP excludes `dataset/`, caches, virtual environments, dependencies and nested archives. Evaluation and usage reports are included. `submission_manifest.md` records checksums of the three upload files. The official contract remains in `problem_statement.md`; the development logging requirements remain in `AGENTS.md`.

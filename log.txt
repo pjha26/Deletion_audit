@@ -302,3 +302,25 @@ branch=main
 repo_root=C:/Users/push1/Documents/Codex/2026-10-25/ghost-data-still-exists-northstar-shop/hackerrank-orchestrate-october26
 worktree=main
 parent_agent=none
+
+## [2026-10-25T16:20:31.5954516Z] Submission decision and complete project documentation
+
+User Prompt (verbatim, secrets redacted):
+[@Ponytail](plugin://ponytail@ponytail) so shall i submit this now or need some more improvement according to the time constraint and also write the complete readme.md file accordingly to the project that has been and also write decesions.md file in a humanized way and also in readme.md file make sure to add the architectural diagram
+
+Agent Response Summary:
+Recommended submitting the verified build after the documentation and archive refresh, rather than changing core models near the deadline. Replaced the starter root README and archive README with a complete guide to the implemented offline audit pipeline, Mermaid architecture, setup, input/output contract, investigation UI, tests, measured accuracy, packaging and limitations. Added matching root/code decisions.md files explaining the actual choices and trade-offs in natural first-person language. Preserved the explicit 31/32 status and 15/32 exact public-sample results and the unknown hidden-set accuracy.
+
+Actions:
+* Read current implementation instructions, README, inference usage, packaging and interview guide.
+* Wrote complete README.md and code/README.md with architecture diagram and reproducible commands.
+* Added decisions.md and code/decisions.md so the rationale is available both on GitHub and in the submission archive.
+* Prepared updated user-facing documentation copies and regenerated code.zip with the unchanged validated prediction CSV.
+
+Context:
+tool=Codex
+model=gpt-6.1-sol
+branch=main
+repo_root=C:/Users/push1/Documents/Codex/2026-10-25/ghost-data-still-exists-northstar-shop/hackerrank-orchestrate-october26
+worktree=main
+parent_agent=none
