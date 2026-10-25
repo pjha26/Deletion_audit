@@ -48,7 +48,11 @@ def prefix(resource: str) -> str:
 
 
 def tokens(value: Any) -> set[str]:
-    text = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
+    if isinstance(value, dict):
+        return set().union(*(tokens(v) for v in value.values())) if value else set()
+    if isinstance(value, (list, tuple)):
+        return set().union(*(tokens(v) for v in value)) if value else set()
+    text = str(value)
     return {m.group().casefold() for m in TOKEN.finditer(text)}
 
 
@@ -141,7 +145,7 @@ class Evidence:
         cat = category or cat
         self.observations.append(Observation(resource, system or sys, cat,
             state or observed_state(cat, payload), time or entry['captured_at'],
-            entry['captured_at'], entry['file_id'], location, payload, store, rank))
+            time or entry['captured_at'], entry['file_id'], location, payload, store, rank))
 
     def load(self):
         root = self.dataset.resolve()
@@ -222,7 +226,7 @@ class Evidence:
                     self.add(resource, payload, entry, location,
                              system=context.get('data_store', ''),
                              time=obj.get('recorded_at') or obj.get('observed_at') or context.get('captured_at', ''),
-                             store=context.get('collection', ''))
+                             store=context.get('collection', ''), rank=4 if 'service_exports' in data else 2)
                     return
                 for key, value in obj.items():
                     child = dict(context)
