@@ -8,18 +8,19 @@
   <script defer src="/desk.js"></script>
 </head>
 <body>
+  <button class="skip-case" id="skip-case" type="button">Skip to case details</button>
   <header class="mast">
     <span class="brand"><i aria-hidden="true"></i> Ghost Protocol</span>
-    <span class="environment">Local verification</span>
+    <span class="environment">Local workspace</span>
   </header>
   <main>
     <div class="intro">
       <h1>Verification desk</h1>
-      <p>Check whether deletion holds across your configured systems.</p>
+      <p>Inspect deletion evidence and follow records that return.</p>
     </div>
     <div class="layout">
       <aside class="queue" aria-label="Case queue">
-        <h2>Cases <span id="case-count"></span></h2>
+        <h2>Case queue <span id="case-count" aria-live="polite"></span></h2>
         <label class="sr-only" for="search">Find a case by reference</label>
         <input id="search" type="search" placeholder="Find a case">
         <label class="sr-only" for="filter">Filter case status</label>
@@ -30,10 +31,11 @@
           <option value="VERIFIED_IN_SCOPE">Verified in scope</option>
           <option value="unverified">Not checked yet</option>
         </select>
-        <div id="cases"></div>
+        <nav id="cases" aria-label="Matching cases"></nav>
       </aside>
-      <section class="dossier" aria-label="Selected case">
+      <section class="dossier" id="case-detail" aria-label="Selected case" tabindex="-1">
         <div id="notice" role="status" aria-live="polite"></div>
+        <div id="connection" role="status"></div>
         <div id="case-header"></div>
         <div id="case-body">Loading verification history…</div>
       </section>
