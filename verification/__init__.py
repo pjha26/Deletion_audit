@@ -1,0 +1,1 @@
+"""Live, scoped deletion verification."""

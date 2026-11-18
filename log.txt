@@ -324,3 +324,37 @@ branch=main
 repo_root=C:/Users/push1/Documents/Codex/2026-10-25/ghost-data-still-exists-northstar-shop/hackerrank-orchestrate-october26
 worktree=main
 parent_agent=none
+
+
+## [2026-11-18T21:03:01.3329202Z] SESSION START
+
+tool=Codex
+model=gpt-6.2-sol
+Repo Root: C:/Users/push1/Documents/Codex/2026-10-25/ghost-data-still-exists-northstar-shop/hackerrank-orchestrate-october26
+Branch: ghost-protocol-v2
+Worktree: main
+Parent Agent: none
+Language: py
+Time Remaining: not configured
+
+## [2026-11-18T21:19:28.8185347Z] Build the Ghost Protocol V2 verification desk
+
+User Prompt (verbatim, secrets redacted):
+[@Ponytail](plugin://ponytail@ponytail) so okay proceed with th eimplemenation steps and vefore that just tell me what kind of ui features would be needed for this website?
+
+Agent Response Summary:
+Outlined the case queue, scoped checks, timeline, evidence, review queue and redacted reports. Implemented a separate V2 with read-only PostgreSQL and OpenSearch connections, a synthetic two-case demo, durable rechecks and evidence-linked recurrence alerts. Verified the original 518-row challenge CSV reproduces byte-identically and demonstrated read-only permissions and the live workflow in Chrome. Compared a single local extraction model against the parser on ten synthetic documents. The model added four false candidates and no correct facts, so its output stays advisory and optional.
+
+Actions:
+* Created the ghost-protocol-v2 feature branch and kept original challenge runtime and predictions intact.
+* Ran 43 challenge tests and 8 V2 tests, including the 81-condition policy and coverage matrix.
+* Ran live PostgreSQL and OpenSearch permission probes and browser checks for a surviving copy, ownership conflict, verified cleanup, scheduled recurrence, redacted report and responsive layouts.
+* Wrote V2 setup and evaluation notes and saved desktop and mobile screenshots.
+
+Context:
+tool=Codex
+model=gpt-6.2-sol
+branch=ghost-protocol-v2
+repo_root=C:/Users/push1/Documents/Codex/2026-10-25/ghost-data-still-exists-northstar-shop/hackerrank-orchestrate-october26
+worktree=main
+parent_agent=none

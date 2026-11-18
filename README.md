@@ -2,6 +2,8 @@
 
 An offline investigation tool for the **Ghost Data Still Exists** challenge. It checks whether a deletion request was actually completed across the supplied systems, explains what remains, and produces an ordered remediation and verification plan.
 
+[Ghost Protocol V2](verification/README.md) adds a local verification desk backed by real read-only PostgreSQL and OpenSearch checks. The V2 demo and operational results have their own entry point and do not use the challenge predictions as evidence.
+
 A dashboard saying “Complete” is only a claim. This project checks the underlying records, replicas, identifiers and processes before deciding what the evidence supports.
 
 The submitted runtime uses a small local intent classifier, neural OCR and explicit policy logic. It requires **no paid API, API key, hosted LLM, Node installation or frontend build**. Codex helped develop the project; it is not invoked by the submitted application.

@@ -1,0 +1,18 @@
+name: ghost-protocol-v2
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ghost_demo
+      POSTGRES_PASSWORD: ${GHOST_PG_ADMIN_PASSWORD:?Set demo credentials}
+    ports:
+      - "127.0.0.1:45432:5432"
+  search:
+    image: opensearchproject/opensearch:2.19.5
+    environment:
+      discovery.type: single-node
+      plugins.security.allow_default_init_securityindex: "true"
+      OPENSEARCH_INITIAL_ADMIN_PASSWORD: ${GHOST_SEARCH_ADMIN_PASSWORD:?Set demo credentials}
+      OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports:
+      - "127.0.0.1:49200:9200"

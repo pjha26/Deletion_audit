@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Verification Desk · Ghost Protocol</title>
+  <link rel="stylesheet" href="/desk.css">
+  <script defer src="/desk.js"></script>
+</head>
+<body>
+  <header class="mast">
+    <span class="brand"><i aria-hidden="true"></i> Ghost Protocol</span>
+    <span class="environment">Local verification</span>
+  </header>
+  <main>
+    <div class="intro">
+      <h1>Verification desk</h1>
+      <p>Check whether deletion holds across your configured systems.</p>
+    </div>
+    <div class="layout">
+      <aside class="queue" aria-label="Case queue">
+        <h2>Cases <span id="case-count"></span></h2>
+        <label class="sr-only" for="search">Find a case by reference</label>
+        <input id="search" type="search" placeholder="Find a case">
+        <label class="sr-only" for="filter">Filter case status</label>
+        <select id="filter">
+          <option value="all">All cases</option>
+          <option value="review">Needs review</option>
+          <option value="INCOMPLETE">Incomplete</option>
+          <option value="VERIFIED_IN_SCOPE">Verified in scope</option>
+          <option value="unverified">Not checked yet</option>
+        </select>
+        <div id="cases"></div>
+      </aside>
+      <section class="dossier" aria-label="Selected case">
+        <div id="notice" role="status" aria-live="polite"></div>
+        <div id="case-header"></div>
+        <div id="case-body">Loading verification history…</div>
+      </section>
+    </div>
+  </main>
+</body>
+</html>
